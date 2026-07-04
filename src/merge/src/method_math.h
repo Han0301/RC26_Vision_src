@@ -17,148 +17,212 @@
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>         // PCD 格式读写
 #include <cmath>  // 必须包含：fabs、isnan 依赖
-//
+
 
 namespace Ten
 {
 
+    // 浮点数相等判断辅助函数
+    inline bool isDoubleEqual(double a, double b, double epsilon = 1e-8) {
+        return std::fabs(a - b) < epsilon;
+    }
     
-
-        // 浮点数相等判断辅助函数（通用精度 1e-8，可根据需求调整）
-        inline bool isDoubleEqual(double a, double b, double epsilon = 1e-8) {
-            return std::fabs(a - b) < epsilon;
+    struct XYZ
+    {
+        // 减法（原有）
+        XYZ operator-(const XYZ& other) const {
+            XYZ result;
+            result._x = this->_x - other._x;
+            result._y = this->_y - other._y;
+            result._z = this->_z - other._z;
+            return result;
         }
-
-        struct XYZ
-        {
-            XYZ operator-(const XYZ& other) const
-            {
-                XYZ result;
-                result._x = this->_x - other._x;
-                result._y = this->_y - other._y;
-                result._z = this->_z - other._z;
-                return result;
+    
+        // 负号（原有）
+        XYZ operator-() const {
+            XYZ result;
+            result._x = -this->_x;
+            result._y = -this->_y;
+            result._z = -this->_z;
+            return result;
+        }
+    
+        // 加法 +
+        XYZ operator+(const XYZ& other) const {
+            XYZ result;
+            result._x = this->_x + other._x;
+            result._y = this->_y + other._y;
+            result._z = this->_z + other._z;
+            return result;
+        }
+    
+        // 减等于 -=
+        XYZ& operator-=(const XYZ& other) {
+            _x -= other._x;
+            _y -= other._y;
+            _z -= other._z;
+            return *this;
+        }
+    
+        // 加等于 +=
+        XYZ& operator+=(const XYZ& other) {
+            _x += other._x;
+            _y += other._y;
+            _z += other._z;
+            return *this;
+        }
+    
+        // 相等判断（原有）
+        bool operator==(const XYZ& tmp) const {
+            return isDoubleEqual(_x, tmp._x) &&
+                   isDoubleEqual(_y, tmp._y) &&
+                   isDoubleEqual(_z, tmp._z);
+        }
+    
+        bool operator!=(const XYZ& tmp) const {
+            return !(*this == tmp);
+        }
+    
+        // 欧氏距离（原有）
+        double Eclidean_distance(const XYZ& site) const {
+            return (_x - site._x)*(_x - site._x) + 
+                   (_y - site._y)*(_y - site._y) + 
+                   (_z - site._z)*(_z - site._z);
+        }
+    
+        double _x = 0.0;
+        double _y = 0.0;
+        double _z = 0.0;
+    };
+    
+    struct RPY
+    {
+        // 减法（原有）
+        RPY operator-(const RPY& other) const {
+            RPY result;
+            result._roll = this->_roll - other._roll;
+            result._pitch = this->_pitch - other._pitch;
+            result._yaw = this->_yaw - other._yaw;
+            return result;
+        }
+    
+        // 负号（原有）
+        RPY operator-() const {
+            RPY result;
+            result._roll = -this->_roll;
+            result._pitch = -this->_pitch;
+            result._yaw = -this->_yaw;
+            return result;
+        }
+    
+        // 加法 +
+        RPY operator+(const RPY& other) const {
+            RPY result;
+            result._roll = this->_roll + other._roll;
+            result._pitch = this->_pitch + other._pitch;
+            result._yaw = this->_yaw + other._yaw;
+            return result;
+        }
+    
+        // 减等于 -=
+        RPY& operator-=(const RPY& other) {
+            _roll -= other._roll;
+            _pitch -= other._pitch;
+            _yaw -= other._yaw;
+            return *this;
+        }
+    
+        // 加等于 +=
+        RPY& operator+=(const RPY& other) {
+            _roll += other._roll;
+            _pitch += other._pitch;
+            _yaw += other._yaw;
+            return *this;
+        }
+    
+        // 相等判断（原有）
+        bool operator==(const RPY& tmp) const {
+            return isDoubleEqual(_roll, tmp._roll) &&
+                   isDoubleEqual(_pitch, tmp._pitch) &&
+                   isDoubleEqual(_yaw, tmp._yaw);
+        }
+    
+        bool operator!=(const RPY& tmp) const {
+            return !(*this == tmp);
+        }
+    
+        double _roll = 0.0;
+        double _pitch = 0.0;
+        double _yaw = 0.0;
+    };
+    
+    struct XYZRPY
+    {
+        // 减法（原有）
+        XYZRPY operator-(const XYZRPY& other) const {
+            XYZRPY result;
+            result._xyz = this->_xyz - other._xyz;
+            result._rpy = this->_rpy - other._rpy;
+            return result;
+        }
+    
+        // 负号（原有）
+        XYZRPY operator-() const {
+            XYZRPY result;
+            result._xyz = -this->_xyz; 
+            result._rpy = -this->_rpy;   
+            return result;
+        }
+    
+        // 加法 +
+        XYZRPY operator+(const XYZRPY& other) const {
+            XYZRPY result;
+            result._xyz = this->_xyz + other._xyz;
+            result._rpy = this->_rpy + other._rpy;
+            return result;
+        }
+    
+        // 减等于 -=
+        XYZRPY& operator-=(const XYZRPY& other) {
+            _xyz -= other._xyz;
+            _rpy -= other._rpy;
+            return *this;
+        }
+    
+        // 加等于 +=
+        XYZRPY& operator+=(const XYZRPY& other) {
+            _xyz += other._xyz;
+            _rpy += other._rpy;
+            return *this;
+        }
+    
+        // 相等判断（原有）
+        bool operator==(const XYZRPY& tmp) const {
+            return _xyz == tmp._xyz && _rpy == tmp._rpy;
+        }
+    
+        bool operator!=(const XYZRPY& tmp) const {
+            return !(*this == tmp);
+        }
+    
+        // NaN 判断（原有）
+        bool XYZRPYisnan() const {
+            return std::isnan(_xyz._x) || std::isnan(_xyz._y) || std::isnan(_xyz._z) ||
+                   std::isnan(_rpy._roll) || std::isnan(_rpy._pitch) || std::isnan(_rpy._yaw);
+        }
+    
+        // 欧氏距离（原有）
+        double Eclidean_distance(const XYZRPY& pose) const {
+            if(XYZRPYisnan() || pose.XYZRPYisnan()) {
+                return -1;
             }
-
-            XYZ operator-() const
-            {
-                XYZ result;
-                result._x = -this->_x;
-                result._y = -this->_y;
-                result._z = -this->_z;
-                return result;
-            }
-
-            // ✅ 完善：const 成员函数 + const 引用 + 浮点数精度比较
-            bool operator==(const XYZ& tmp) const
-            {
-                return isDoubleEqual(_x, tmp._x) &&
-                    isDoubleEqual(_y, tmp._y) &&
-                    isDoubleEqual(_z, tmp._z);
-            }
-
-            // ✅ 配套实现 != 运算符（可选，更易用）
-            bool operator!=(const XYZ& tmp) const {
-                return !(*this == tmp);
-            }
-
-            double Eclidean_distance(const XYZ& site) const  // 添加 const
-            {
-                return (_x - site._x)*(_x - site._x) + 
-                    (_y - site._y)*(_y - site._y) + 
-                    (_z - site._z)*(_z - site._z);
-            }
-
-            double _x = 0.0;
-            double _y = 0.0;
-            double _z = 0.0;
-        };
-
-        struct RPY
-        {
-            RPY operator-(const RPY& other) const
-            {
-                RPY result;
-                result._roll = this->_roll - other._roll;
-                result._pitch = this->_pitch - other._pitch;
-                result._yaw = this->_yaw - other._yaw;
-                return result;
-            }
-
-            RPY operator-() const
-            {
-                RPY result;
-                result._roll = -this->_roll;
-                result._pitch = -this->_pitch;
-                result._yaw = -this->_yaw;
-                return result;
-            }
-
-            // ✅ 完善：const 成员函数 + const 引用 + 浮点数精度比较
-            bool operator==(const RPY& tmp) const
-            {
-                return isDoubleEqual(_roll, tmp._roll) &&
-                    isDoubleEqual(_pitch, tmp._pitch) &&
-                    isDoubleEqual(_yaw, tmp._yaw);
-            }
-
-            // ✅ 配套实现 != 运算符
-            bool operator!=(const RPY& tmp) const {
-                return !(*this == tmp);
-            }
-
-            double _roll = 0.0;
-            double _pitch = 0.0;
-            double _yaw = 0.0;
-        };
-
-        struct XYZRPY
-        {
-            XYZRPY operator-(const XYZRPY& other) const
-            {
-                XYZRPY result;
-                result._xyz = this->_xyz - other._xyz;
-                result._rpy = this->_rpy - other._rpy;
-                return result;
-            }
-
-            XYZRPY operator-() const
-            {
-                XYZRPY result;
-                result._xyz = -this->_xyz; 
-                result._rpy = -this->_rpy;   
-                return result;
-            }
-
-            // ✅ 完善：直接复用子结构体的 == 运算符
-            bool operator==(const XYZRPY& tmp) const
-            {
-                return _xyz == tmp._xyz && _rpy == tmp._rpy;
-            }
-
-            // ✅ 配套实现 != 运算符
-            bool operator!=(const XYZRPY& tmp) const {
-                return !(*this == tmp);
-            }
-
-            bool XYZRPYisnan() const
-            {
-                return std::isnan(_xyz._x) || std::isnan(_xyz._y) || std::isnan(_xyz._z) ||
-                    std::isnan(_rpy._roll) || std::isnan(_rpy._pitch) || std::isnan(_rpy._yaw);
-            }
-
-            double Eclidean_distance(const XYZRPY& pose) const  // 添加 const & 优化
-            {
-                if(XYZRPYisnan() || pose.XYZRPYisnan())
-                {
-                    return -1;
-                }
-                return _xyz.Eclidean_distance(pose._xyz);
-            }
-
-            XYZ _xyz;
-            RPY _rpy;
-        };
+            return _xyz.Eclidean_distance(pose._xyz);
+        }
+    
+        XYZ _xyz;
+        RPY _rpy;
+    };
+    
 
 
     /**

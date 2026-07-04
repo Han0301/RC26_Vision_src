@@ -100,7 +100,11 @@ public:
         // }
 
         typename PointCloudT::Ptr local_cloud;
-        sensor_msgs::PointCloud2 map = Ten::_Map_GET_.read_data();
+        sensor_msgs::PointCloud2 map;
+        if(!Ten::_Map_GET_.pop(map))
+        {
+            return Ten::XYZRPY();
+        }
         local_cloud = Ten::sensor_msgs_PointCloud2topcltype<PointCloudT>(map);   
         if(local_cloud == nullptr || local_cloud->points.size() <= _min_num_of_point_cloud_for_relocation_)
         {
@@ -276,7 +280,7 @@ private:
         typename pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
         ne.setInputCloud(cloud);
         ne.setSearchMethod(tree);
-        ne.setKSearch(20); // 近邻数，可根据点云密度调整
+        ne.setKSearch(100); // 近邻数，可根据点云密度调整
         //ne.setRadiusSearch(5);
         ne.compute(*normals);
 
@@ -285,7 +289,7 @@ private:
         fpfh.setInputCloud(cloud);
         fpfh.setInputNormals(normals);
         fpfh.setSearchMethod(tree);
-        fpfh.setKSearch(50); // 特征计算近邻数
+        fpfh.setKSearch(200); // 特征计算近邻数
         fpfh.compute(*fpfh_features);
         std::cout << "FPFH特征提取完成，特征维度: " << fpfh_features->size() << std::endl;
     }

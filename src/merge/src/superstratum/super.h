@@ -6,6 +6,7 @@
 #include "./../point_lio/src/laserMapping2.h"
 #include "./../lidar.h"
 #include "./../camera.h"
+#include "./../camera2.h"
 #include "./../relocation.h"
 #include "./../coordinate.h"
 #include "./../recognition/camera_calibration.h"
@@ -99,7 +100,12 @@ namespace Ten
                 Ten::ORB::orb_exhaust_element oee;
                 camera_->camera_read().copyTo(oee.image_);
                 //获得雷达定位坐标
-                nav_msgs::Odometry odo = Ten::_TF_GET_.read_data();
+                // 位置变化
+                nav_msgs::Odometry odo;
+                if(!Ten::_TF_GET_.get_latest(odo))
+                {
+                    return;
+                }
                 Ten::XYZRPY lidar_of_world1 = Ten::Nav_Odometrytoxyzrpy(odo);
                 // std::cout << "--------------lidar_of_world1-------------" << std::endl; 
                 // std::cout << "x: " << lidar_of_world1._xyz._x << std::endl;
@@ -155,7 +161,11 @@ namespace Ten
                 Ten::ORB::orb_exhaust_element oee;
                 camera_->camera_read().copyTo(oee.image_);
                 //获得雷达定位坐标
-                nav_msgs::Odometry odo = Ten::_TF_GET_.read_data();
+                nav_msgs::Odometry odo;
+                if(!Ten::_TF_GET_.get_latest(odo))
+                {
+                    return;
+                }
                 Ten::XYZRPY lidar_of_world1 = Ten::Nav_Odometrytoxyzrpy(odo);
                 // std::cout << "---------------------------" << std::endl; 
                 // std::cout << "x: " << lidar_of_world1._xyz._x << std::endl;

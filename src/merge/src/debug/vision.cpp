@@ -3,15 +3,14 @@
 
 
 
-#include <filesystem> 
-#include "./superstratum/super.h"
-#include "./superstratum/super2.h"
-#include "./superstratum/super_post.h"
-#include "./lidar/lidar_recognition.h"
-#include "./lidar/lidar_getttf.h"
-#include "./calibration/fast_camera_calibration.h"
-#include "./superstratum/controlR2.h"
-#include "./PnP/pnp_main.h"
+
+#include "./../superstratum/super.h"
+#include "./../superstratum/super2.h"
+#include "./../lidar/lidar_recognition.h"
+#include "./../lidar/lidar_getttf.h"
+#include "./../calibration/fast_camera_calibration.h"
+#include "./../superstratum/controlR2.h"
+
 
 void orb_test()
 {
@@ -834,118 +833,6 @@ void vision_test_super1()
     urcu_memb_unregister_thread();
 }
 
-void vision_test_super2()
-{
-    urcu_memb_register_thread();
-
-    std::string dataset_path = Ten::superstratum::_test_datasets_;
-    std::vector<std::vector<Ten::ORB::debug_orb_exhaust_element>> datasets = Ten::ORB::load_exhaust_dataset(dataset_path);
-    size_t num = 0;
-
-    float total_sure_loss = 0.0f;
-    for(size_t i = 0; i < datasets.size(); i++)
-    {
-        // int i = 0;
-        Ten::superstratum::supper2 supper2_(true);
-        Ten::superstratum::super_post super_post_;
-        std::cout << "---------------------------------idx: " << i + 1 << std::endl;
-        std::vector<int> label(12);
-        std::vector<Ten::ORB::debug_orb_exhaust_element> batch_images_labels = datasets[i];
-        std::vector<Ten::ORB::orb_exhaust_element> batch_images;
-
-        for (int j = 0; j < batch_images_labels.size(); j++)
-        {
-            label = batch_images_labels[j].label;
-        }
-
-        // 设置 本批次图像
-        supper2_.set_debug_batch_images(batch_images_labels);
-
-        // 模型推理和后处理
-        supper2_.set_roi12_place();
-        supper2_.set_cls();
-
-        // 取结果
-        total_sure_loss += supper2_.get_sure_loss();
-        std::vector<int> cls = supper2_.get_classifier_();
-        std::vector<int> place = supper2_.get_place();
-        std::vector<float> conf = supper2_.get_confidence_();
-        std::vector<float> per_loss = supper2_.get_per_loss();
-        std::vector<std::vector<int>> time_ps_ = supper2_.get_time_ps_();
-        super_post_.set_final_result(cls,conf, place, per_loss, true,true);
-        std::vector<int> result = super_post_.get_final_result();
-
-        // std::cout << "time_ps_: " << std::endl;
-        // for (int i = 0; i < time_ps_.size(); i++)
-        // {
-        //     std::cout << "time " << i << " ";
-        //     for (int j = 0; j < time_ps_[i].size(); j++)
-        //     {
-        //         std::cout << time_ps_[i][j] << ", ";
-        //     }
-        //     std::cout << std::endl;
-        // }
-        // 调试打印
-        supper2_.print_post_cls(result);
-
-        namespace fs = std::filesystem;
-        std::vector<cv::Mat> roi_images = supper2_.get_roi_images();
-        for (int j = 0; j < roi_images.size(); j++)
-        {
-            std::string save_dir = dataset_path + "/r/" + to_string(i + 1);
-            if (!fs::exists(save_dir)) {
-                fs::create_directories(save_dir);
-            }
-            std::string save_path = save_dir + "/" + to_string(j + 1) + ".png";
-            cv::imwrite(save_path, roi_images[j]);
-        }
-
-        int flag = 0;
-        for(size_t j = 0; j < label.size(); j++)
-        {
-            if(label[j] != place[j])
-            {
-                flag = 1;
-                break;
-            }
-        }   
-
-        if(flag)
-        {
-            std::cout << std::endl;
-            std::cout << "-----------" << i+1 << "--------------" << std::endl;
-            std::cout << "place: " << std::endl;
-            for(auto& e : place)
-            {
-                std::cout << e << " ";
-            }
-            std::cout << std::endl;
-            std::cout << "label: " << std::endl;
-            for(auto& e : label)
-            {
-                std::cout << e << " ";
-            }
-            std::cout << std::endl;
-            std::cout << "--------------------------" << std::endl;
-
-            Ten::ORB::save_loss_label_to_json("/home/h/图片/test_datas/e", i+1, place, 0);
-        }
-        else
-        {
-            num++;
-        }
-        Ten::ORB::save_loss_label_to_json("//home/h/图片/test_datas/r", i+1, place, 0);
-    }
-
-    std::cout << "total_sure_loss: " << total_sure_loss << std::endl;
-    std::cout << "avg_sure_loss: " << total_sure_loss / float(datasets.size()) << std::endl;
-    
-    if(datasets.size() != 0)
-        std::cout << "accuracy: " << (float)num / datasets.size() << std::endl;
-    
-    urcu_memb_unregister_thread();
-}
-
 
 int vision_test_relocation2()
 {
@@ -1179,7 +1066,7 @@ void vision_code2()
 
             vision_controller2.set_roi12_place();
             vision_controller2.set_cls();
-            // vision_controller2.set_post_cls();
+            vision_controller2.set_post_cls();
             vision_controller2.print_post_cls();
         }
         else if(flag == 4)
@@ -1220,24 +1107,6 @@ void input_code()
 }
 
 
-void test_pnp()
-{
-    urcu_memb_register_thread();
-
-    Ten::Ten_camera& camera = Ten::Ten_camera::GetInstance();
-    camera.reset_camera_depth(640, 480, 30);
-    rs2_intrinsics color_intr = camera.get_color_intrinsics();
-    Ten::KFS::kfsLocator pnp_hander(color_intr);
-
-    while (Ten::_TREADPOOL_FLAG_.read_flag())
-    {
-        Ten::camera_frame frame = camera.camera_read_depth();
-        double bias = pnp_hander.processOneFrame(frame.bgr_image,frame.depth_image);
-        std::cout << "bias: " << bias << std::endl;
-    }
-
-    urcu_memb_unregister_thread();
-}
 
 #endif
 

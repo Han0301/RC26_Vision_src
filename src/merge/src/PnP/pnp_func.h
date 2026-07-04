@@ -25,9 +25,6 @@
 #include "pnp_param.h"
 #include "../camera.h"
 #include "../openvino.h"
-#include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/image_encodings.h>
 
 namespace Ten
 {
@@ -76,13 +73,13 @@ public:
   // 构造函数
   explicit kfsPnpSolver(const kfsPnpConfig& cfg, const rs2_intrinsics& color_intr)
       : cfg_(cfg),
-        color_intr_(color_intr),
         inliers(new pcl::PointIndices),
         coeff(new pcl::ModelCoefficients),
         plane(new pcl::PointCloud<pcl::PointXYZ>),
-        remain(new pcl::PointCloud<pcl::PointXYZ>),
-        // detector("/home/h/下载/卷轴检测_han2/best","cpu",0,0.5,0.5)
+        remain(new pcl::PointCloud<pcl::PointXYZ>)
+        //detector("/home/h/下载/卷轴检测_han2/best","cpu",0,0.5,0.5)
   {
+    color_intr_ = color_intr;
     // 覆盖相机内参参数
     cfg_.fx = color_intr.fx;
     cfg_.fy = color_intr.fy;
@@ -213,46 +210,46 @@ public:
 
 private:
 
-  cv::Rect test_yolo2(const cv::Mat &img)
-  {
-      // 调用worker函数
-      cv::Mat image = img.clone();
-      std::vector<Ten::Detection> results = detector.worker(image);
+  // cv::Rect test_yolo2(const cv::Mat &img)
+  // {
+  //     // 调用worker函数
+  //     cv::Mat image = img.clone();
+  //     std::vector<Ten::Detection> results = detector.worker(image);
 
-      if(results.size() == 0)
-      {
-        return cv::Rect();
-      }
+  //     if(results.size() == 0)
+  //     {
+  //       return cv::Rect();
+  //     }
 
-      // 遍历框，计算其中面积最大的
-      // Ten::Detection best;
-      // double max_square = 0;
-      // for (int i = 0; i < results.size(); i++)
-      // {
-      //     double square = results[i].w_ * results[i].h_;
-      //     if (square > max_square)
-      //     {
-      //         best = results[i];
-      //         max_square = square;
-      //     }
-      // }
-      std::sort(results.begin(), results.end(),
-                [](const Ten::Detection &det1, const Ten::Detection &det2) -> bool
-                {
-                    double s1 = det1.w_ * det1.h_;
-                    double s2 = det2.w_ * det2.h_;
-                    return s1 > s2;
-                });
-      Ten::Detection best = results[0];
+  //     // 遍历框，计算其中面积最大的
+  //     // Ten::Detection best;
+  //     // double max_square = 0;
+  //     // for (int i = 0; i < results.size(); i++)
+  //     // {
+  //     //     double square = results[i].w_ * results[i].h_;
+  //     //     if (square > max_square)
+  //     //     {
+  //     //         best = results[i];
+  //     //         max_square = square;
+  //     //     }
+  //     // }
+  //     std::sort(results.begin(), results.end(),
+  //               [](const Ten::Detection &det1, const Ten::Detection &det2) -> bool
+  //               {
+  //                   double s1 = det1.w_ * det1.h_;
+  //                   double s2 = det2.w_ * det2.h_;
+  //                   return s1 > s2;
+  //               });
+  //     Ten::Detection best = results[0];
 
-      // 归一化
-      float x1 = best.cx_ - best.w_ / 2;
-      float x2 = best.cx_ + best.w_ / 2;
-      float y1 = best.cy_ - best.h_ / 2;
-      float y2 = best.cy_ + best.h_ / 2;
+  //     // 归一化
+  //     float x1 = best.cx_ - best.w_ / 2;
+  //     float x2 = best.cx_ + best.w_ / 2;
+  //     float y1 = best.cy_ - best.h_ / 2;
+  //     float y2 = best.cy_ + best.h_ / 2;
 
-      return cv::Rect(cv::Point2i(x1, y1), cv::Point2i(x2, y2));
-  }
+  //     return cv::Rect(cv::Point2i(x1, y1), cv::Point2i(x2, y2));
+  // }
 
 
   // 提取红色目标ROI区域
@@ -1014,7 +1011,7 @@ private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr prevCloud_;            // 上一帧点云
   Eigen::Affine3f prevPose_ = Eigen::Affine3f::Identity();   // 上一帧位姿
 
-  Ten::Ten_yolo detector;
+  //Ten::Ten_yolo detector;
 };
 
 } // namespace KFS

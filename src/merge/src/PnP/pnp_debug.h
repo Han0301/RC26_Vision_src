@@ -33,6 +33,7 @@ public:
     DebugDrawer()
     {
         pcl_pub_ = nh.advertise<sensor_msgs::PointCloud2>(topic_name, 10);
+        pnp_debug_img_pub = nh.advertise<sensor_msgs::Image>("/kfs/debug_image", 10);
     };
 
     // 👇 所有函数直接在类内实现，自动内联，无多重定义
@@ -96,13 +97,11 @@ public:
     void publishPnpDebugImage(
         const cv::Mat& color,
         const kfsPnpOutput& pnp_out,
-        const rs2_intrinsics& color_intr,
-        ros::Publisher& debug_pub,
-        const DebugConfig& config_  // 替换成你真实的配置类名
+        const rs2_intrinsics& color_intr
     )
     {
         // 空图像直接返回
-        if (color.empty() || !debug_pub)
+        if (color.empty())
             return;
 
         // —————————— 1:1 复刻原 draw 函数的图像处理逻辑 ——————————
@@ -141,11 +140,12 @@ public:
         cv_msg.image = img;
 
         sensor_msgs::ImagePtr msg = cv_msg.toImageMsg();
-        debug_pub.publish(msg);
+        pnp_debug_img_pub.publish(msg);
     }
 
 private:
     ros::Publisher pcl_pub_;
+    ros::Publisher pnp_debug_img_pub;
     ros::NodeHandle nh;
     std::string topic_name = "/camera/pointcloud";
 

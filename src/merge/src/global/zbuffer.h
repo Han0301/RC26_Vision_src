@@ -11,19 +11,19 @@
 namespace Ten
 {
 
-#define L_ 1.2f                 // 台阶长度
-#define H_ 0.2f                 // 台阶高度
-#define lx1_ 0.425f             // 台阶到方块的间距
-#define ly1_ 0.425f             // 台阶到方块的间距
-#define lh_ 0.35f               // 方块的长度
-#define X_  3.2f         //3.2f                 // 初始位置到梅花林1号位置边角的x轴距离
-#define Y_   -1.2 //-0.83f        //-1.2f                // 初始位置到梅花林1号位置边角的y轴距离
-#define LIDAR_HEIGHT_   0 //0.79f    //0         // 雷达的高度 
-#define box_half_length_ 0.175  // 方块长度的一半
-#define step_half_length_ 0.6   // 台阶水平边长的一半
-#define offset_x_ 0             // x方向上的偏移量
-#define offset_y_ 0             // y方向上的偏移量
-#define offset_z_ 0             // z方向上的偏移量
+// #define L_ 1.2f                 // 台阶长度
+// #define H_ 0.2f                 // 台阶高度
+// #define lx1_ 0.425f             // 台阶到方块的间距
+// #define ly1_ 0.425f             // 台阶到方块的间距
+// #define lh_ 0.35f               // 方块的长度
+// #define X_  3.2f         //3.2f                 // 初始位置到梅花林1号位置边角的x轴距离
+// #define Y_   -1.2 //-0.83f        //-1.2f                // 初始位置到梅花林1号位置边角的y轴距离
+// #define LIDAR_HEIGHT_   0 //0.79f    //0         // 雷达的高度 
+// #define box_half_length_ 0.175  // 方块长度的一半
+// #define step_half_length_ 0.6   // 台阶水平边长的一半
+// #define offset_x_ 0             // x方向上的偏移量
+// #define offset_y_ 0             // y方向上的偏移量
+// #define offset_z_ 0             // z方向上的偏移量
 
 // struct surface_2d_point {        
 //     int idx;                       // 对应方块索引

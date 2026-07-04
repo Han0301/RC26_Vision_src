@@ -103,7 +103,7 @@ namespace Ten
         int _limit_count_2_ = 0;
         int _limit_count_3_ = 0;
         int _limit_count_4_ = 0;
-        std::string _test_datasets_;
+
         //雷达到相机 4x4 变换矩阵
         Eigen::Matrix4d _lidar_to_camera_transform_matrix_;
     }
@@ -138,4 +138,28 @@ namespace Ten
     double camera_fy_1080 = 0;
     double camera_cx_1080 = 0;
     double camera_cy_1080 = 0;
+    //发布频率
+    double _laser_pub_hz_ = 200.0;
+
+    //ekf
+    double _q_pos_   = 0;   // 位置过程噪声系数
+    double _q_att_   = 0;   // 姿态过程噪声系数
+    double _q_vel_   = 0;   // 线速度过程噪声系数
+    double _q_ang_   = 0;   // 角速度过程噪声系数
+
+
+    //雷达自己的初始误差
+    double _lidar_xyzrpy_init_error_xyz_x_ = 0;
+    double _lidar_xyzrpy_init_error_xyz_y_ = 0;
+    double _lidar_xyzrpy_init_error_xyz_z_ = 0;
+    double _lidar_xyzrpy_init_error_rpy_roll_ = 0;
+    double _lidar_xyzrpy_init_error_rpy_pitch_ = 0;
+    double _lidar_xyzrpy_init_error_rpy_yaw_ = 0.0;
+
+    //camera_kfs
+    double _camera_x_bias_ = 0;
+    double _camera_y_bias_ = 0;
+    double _camera_z_bias_ = 0;
+    double _max_bias_  = 0.2;
+
 }

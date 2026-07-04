@@ -4,25 +4,25 @@
 
 
 
-#include "serial.h"
-#include "openvino.h"
-#include "threadpool.h"
-#include "./livox_ros_driver2/src/livox_ros_driver.h"
-#include "./point_lio/src/laserMapping2.h"
-#include "lidar.h"
-#include "camera.h"
+#include "./../serial.h"
+#include "./../openvino.h"
+#include "./../threadpool.h"
+#include "./..//livox_ros_driver2/src/livox_ros_driver.h"
+#include "./..//point_lio/src/laserMapping2.h"
+#include "./../lidar.h"
+#include "./../camera.h"
 // #include "test.cpp"
 // #include "test2.cpp"
-#include "relocation.h"
-#include "coordinate.h"
-#include "recognition/camera_calibration.h"
-#include "recognition/world_to_camera.h"
-#include "velocity.h"
-#include "calibration.h"
-#include "log/logger.h"
+#include "./../relocation.h"
+#include "./../coordinate.h"
+#include "./../recognition/camera_calibration.h"
+#include "./../recognition/world_to_camera.h"
+#include "./../velocity.h"
+#include "./../calibration.h"
+#include "./../log/logger.h"
 #include <cctype>     // isdigit() 字符判断（必须包含，否则部分编译器报错）
 #include <fstream>    // 文件读写
-#include "filter.h"
+#include "./../filter.h"
 
 // void test_lidar()
 // {
@@ -502,7 +502,7 @@ void test_lidar()
     xyzrpy_car._rpy._roll = 0;
     xyzrpy_car._rpy._pitch = 0;
     xyzrpy_car._rpy._yaw = -M_PI / 2.0;
-    Ten::_COORDINATE_TRANSFORMATION_.set_lidartocar(xyzrpy_car);
+    //Ten::_COORDINATE_TRANSFORMATION_.set_lidartocar(xyzrpy_car);
 
     //Ten::_VELOCITY_TRANSFORMATION_.set_RT(xyzrpy_car);
     // nav_msgs::Odometry odo_n;

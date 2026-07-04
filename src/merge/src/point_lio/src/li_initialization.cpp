@@ -24,8 +24,9 @@ std::deque<PointCloudXYZI::Ptr>  lidar_buffer;
 std::deque<double>               time_buffer;
 std::deque<sensor_msgs::Imu::Ptr> imu_deque;
 
-std::mutex _lasermapping_;
-bool __lasermapping_running_ = false;
+// std::mutex _lasermapping_;
+// bool __lasermapping_running_ = false;
+std::atomic<bool> __lasermapping_running_{false};
 
 void standard_pcl_cbk(const sensor_msgs::PointCloud2::ConstPtr &msg) 
 {

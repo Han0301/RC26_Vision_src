@@ -1,8 +1,7 @@
-//#include "merge_func.cpp"
-// #include "control.cpp"
-#include "vision.cpp"
+#include "./debug/debug_control.cpp"
 #include "./superstratum/controlR2.h"
 #include "./superstratum/super2.h"
+#include "./point_lio/src/laserMapping2.h"
 
 /**
  * @brief 自定义SIGINT信号处理函数（捕获Ctrl+C）
@@ -137,19 +136,24 @@ void sigintHandler(int sig)
 
         std::cout << "🐅: " << "R0" << std::endl;
         Ten::parameter::loadyaml ly;
+        //Ten::_COORDINATE_TRANSFORMATION_.init();
+        //Ten::_PUB_CLOUD_FLAG_.set_flag(0);
         std::string lidar_path = std::string(ROOT_DIR) + std::string("src/livox_ros_driver2/config/MID360_config.json");
-        // Ten::Ten_lidar::GetInstance(lidar_path);
-        // Ten::ThreadPool pool(2);
-        // pool.enqueue(test_calibration);
-        // pool.enqueue(input_code);
-        // laserMapping();
-        // vision_test_super2();
-        // test_pnp(nh);
+        Ten::Ten_lidar::GetInstance(lidar_path);
+        Ten::ThreadPool pool(4);
+        //pool.enqueue(Loopcallback);
+        pool.enqueue(test_lidar_point_lio_imu2);
+        // //pool.enqueue(test_lidar_ekf_of_point_lio);
+        // //pool.enqueue(test_lidar_fast_lio);
+        pool.enqueue(test_input);
+        // pool.enqueue(Ten::superstratum::controlR2::serial_send_lidarR2_ekf_imu);
+        // pool.enqueue(Ten::superstratum::controlR2::serial_receiver);
+        laserMapping();
+        //vision_test_super1();
         //vision_test_relocation2();
         //serial_send_test1();
         //publishimg2();
-
-        test_pnp();
+        //vision_test_relocation2();
         return 0;
     }
 #endif

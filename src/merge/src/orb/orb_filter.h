@@ -55,6 +55,23 @@ namespace Ten
 
         struct orb_init_cube_points
         {
+
+            // #define L_ 1.2f                 // 台阶长度
+            // #define H_ 0.2f                 // 台阶高度
+            // #define lx1_ 0.425f             // 台阶到方块的间距
+            // #define ly1_ 0.425f             // 台阶到方块的间距
+            // #define lh_ 0.35f               // 方块的长度
+            // #define X_  3.2f         //3.2f                 // 初始位置到梅花林1号位置边角的x轴距离
+            // #define Y_   -1.2 //-0.83f        //-1.2f                // 初始位置到梅花林1号位置边角的y轴距离
+            // #define LIDAR_HEIGHT_   0 //0.79f    //0         // 雷达的高度 
+            // #define box_half_length_ 0.175  // 方块长度的一半
+            // #define step_half_length_ 0.6   // 台阶水平边长的一半
+            // #define offset_x_ 0             // x方向上的偏移量
+            // #define offset_y_ 0             // y方向上的偏移量
+            // #define offset_z_ 0             // z方向上的偏移量
+
+
+
             std::vector<Cube> cube_list_;
 
             /**
@@ -62,6 +79,21 @@ namespace Ten
              */
             orb_init_cube_points()
             {
+                // 全部替换为 const 常量，名字、数值、注释完全不变
+                const float L_ = 1.2f;                 // 台阶长度
+                const float H_ = 0.2f;                 // 台阶高度
+                const float lx1_ = 0.425f;             // 台阶到方块的间距
+                const float ly1_ = 0.425f;             // 台阶到方块的间距
+                const float lh_ = 0.35f;               // 方块的长度
+                const float X_ = 3.2f;                 // 初始位置到梅花林1号位置边角的x轴距离
+                const float Y_ = -1.2f;                // 初始位置到梅花林1号位置边角的y轴距离
+                const float LIDAR_HEIGHT_ = 0.0f;      // 雷达的高度 
+                const float box_half_length_ = 0.175f;  // 方块长度的一半
+                const float step_half_length_ = 0.6f;   // 台阶水平边长的一半
+                const float offset_x_ = 0.0f;             // x方向上的偏移量
+                const float offset_y_ = 0.0f;             // y方向上的偏移量
+                const float offset_z_ = 0.0f;             // z方向上的偏移量
+
                 cube_list_.resize(24);
                 //台阶高度
                 float hight_[12] {0.4, 0.2, 0.4, 0.2, 0.4, 0.6, 0.4, 0.6, 0.4, 0.2, 0.4, 0.2};

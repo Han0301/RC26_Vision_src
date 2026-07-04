@@ -339,9 +339,11 @@ target_sources(merge_node
   src/parameter/parameter.cpp
   src/lidar.cpp
   src/method_math.cpp
+  src/method_math_new.cpp
   src/openvino.cpp
   src/serial.cpp
   src/camera.cpp
+  src/camera2.cpp
   src/coordinate.cpp
   src/velocity.cpp
   src/calibration.cpp
@@ -349,6 +351,7 @@ target_sources(merge_node
   src/log/logger.cpp
   src/yolo/yolo_base.cpp
   src/orb/orb_debug.cpp
+  src/PnP/pnp.cpp
   src/recognition/world_to_camera.cpp
   src/recognition/camera_calibration.cpp
   #src/recognition/zbuffer_simplify.cpp

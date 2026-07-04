@@ -7,8 +7,10 @@ namespace Ten
 {
 
     Ten::ThreadPool_flag _TREADPOOL_FLAG_;
-
-
+    Ten::ThreadPool_flag _LASERMAPPING_FLAG_;
+    Ten::ThreadPool_flag _PUB_CLOUD_FLAG_;
+    Ten::ThreadPool_flag _CAMERA_KFS_FLAG_;
+    
     /**
      * @brief 将当前调用该函数的线程设置为高优先级（分配更多CPU资源）
      * @param realtime_priority 实时调度优先级（1-99，建议10-50，默认50）
@@ -89,6 +91,32 @@ namespace Ten
         return true;
     }
 
+    // /**
+    //  * @brief 定时函数：无参数
+    //  * @return 第一次调用返回0.0，后续返回【本次-上次】的时间差（单位：秒）
+    //  */
+    // double timer() 
+    // {
+    //     // 静态变量：保存【上一次调用】的时间点（程序运行中永久生效）
+    //     static std::chrono::steady_clock::time_point last_time;
+    //     // 静态标记：判断是否为【第一次调用】
+    //     static bool is_first = true;
+
+    //     // 获取当前系统时间（稳定时钟，不受系统时间修改影响）
+    //     auto current_time = std::chrono::steady_clock::now();
+
+    //     // 核心逻辑：第一次调用
+    //     if (is_first) {
+    //         is_first = false;
+    //         last_time = current_time; // 初始化基准时间
+    //         return 0.0;               // 第一次固定返回0
+    //     }
+
+    //     // 核心逻辑：非第一次调用 → 计算时间差（秒）
+    //     std::chrono::duration<double> interval = current_time - last_time;
+    //     last_time = current_time; // 更新上一次时间为当前时间
+    //     return interval.count();  // 返回秒数（支持小数精度）
+    // }
 
 
 }

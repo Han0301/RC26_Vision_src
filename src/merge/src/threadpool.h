@@ -150,7 +150,46 @@ int set_thread_as_important(int realtime_priority = 10, int nice_value = -10);
  */
 bool bind_thread_to_cpu(int cpu_core);
 
+
+// /**
+//  * @brief 定时函数：无参数
+//  * @return 第一次调用返回0.0，后续返回【本次-上次】的时间差（单位：秒）
+//  */
+// double timer();
+
+class Timetester
+{
+public:
+    /**
+     * @brief 定时函数：无参数
+     * @return 第一次调用返回0.0，后续返回【本次-上次】的时间差（单位：秒）
+     */
+    double timer() 
+    {
+        // 获取当前系统时间（稳定时钟，不受系统时间修改影响）
+        auto current_time = std::chrono::steady_clock::now();
+        // 核心逻辑：第一次调用
+        if (is_first) {
+            is_first = false;
+            last_time = current_time; // 初始化基准时间
+            return 0.0;               // 第一次固定返回0
+        }
+
+        // 核心逻辑：非第一次调用 → 计算时间差（秒）
+        std::chrono::duration<double> interval = current_time - last_time;
+        last_time = current_time; // 更新上一次时间为当前时间
+        return interval.count();  // 返回秒数（支持小数精度）
+    }
+private:
+   std::chrono::steady_clock::time_point last_time;
+   bool is_first = true; 
+};
+
 extern Ten::ThreadPool_flag _TREADPOOL_FLAG_;
+extern Ten::ThreadPool_flag _LASERMAPPING_FLAG_;
+extern Ten::ThreadPool_flag _PUB_CLOUD_FLAG_;
+extern Ten::ThreadPool_flag _CAMERA_KFS_FLAG_;
+
 
 }
 

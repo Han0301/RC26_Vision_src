@@ -12,14 +12,19 @@
 #include "pnp_func.h"
 #include "../method_math.h"
 #include "pnp_debug.h"
+#include "./../parameter/parameter.h"
 
-#define camera_x_bias 0
-#define camera_y_bias 0
-#define camera_z_bias 0
+// #define _camera_x_bias_ 0
+// #define _camera_y_bias_ 0
+// #define _camera_z_bias_ 0
 
-#define max_bias 0.2    // 约束 -max_bias 到 max_bias
+// #define _max_bias_ 0.1    // 约束 -max_bias 到 max_bias
+
 namespace Ten
 {
+
+void test_pnp();
+
 namespace KFS
 {
 class kfsLocator
@@ -44,16 +49,18 @@ public:
 
         if (out.status != "ok")
         {
-            std::cout << "status: " << out.status << std::endl;
+            //std::cout << "status: " << out.status << std::endl;
+            return NAN;
         }
 
         // debug 部分
         if (debug_mode)
         {
-            pnp_debug.draw(color_frame, out, color_intr_);
-            char key = cv::waitKey(1);
-            if (key == 27) return;
-            pnp_debug.publish_pointcloud(out.cloudFiltered);  
+            // pnp_debug.draw(color_frame, out, color_intr_);
+            // char key = cv::waitKey(1);
+            // if (key == 27) return;
+            pnp_debug.publishPnpDebugImage(color_frame, out, color_intr_);
+            // pnp_debug.publish_pointcloud(out.cloudFiltered);  
             current_roi_ = out.roi;
         }
 
@@ -61,7 +68,7 @@ public:
         set_camera_bias(out);
         center_bias = double(-out.center.y());
 
-        if (-max_bias < center_bias < max_bias)
+        if (-_max_bias_ < center_bias && center_bias < _max_bias_)
         {
             center_bias = 0;
         }
@@ -86,9 +93,9 @@ private:
 
     void set_camera_bias (kfsPnpOutput& out)
     {
-        out.center.x() = out.center.x() + camera_x_bias;
-        out.center.y() = out.center.y() + camera_y_bias;
-        out.center.z() = out.center.z() + camera_z_bias;
+        out.center.x() = out.center.x() + _camera_x_bias_;
+        out.center.y() = out.center.y() + _camera_y_bias_;
+        out.center.z() = out.center.z() + _camera_z_bias_;
     }
 };
 

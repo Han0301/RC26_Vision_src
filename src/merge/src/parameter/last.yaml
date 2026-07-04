@@ -1,6 +1,6 @@
 # ====================== r1 车相对雷达 ======================
-_r1_xyzrpy_car_xyz_x_: -0.40944
-_r1_xyzrpy_car_xyz_y_: 0.45344        # 0.40944 + 0.088/2
+_r1_xyzrpy_car_xyz_x_: -0.465
+_r1_xyzrpy_car_xyz_y_: 0.025        # 0.40944 + 0.088/2
 _r1_xyzrpy_car_xyz_z_: 0.0
 _r1_xyzrpy_car_rpy_roll_: 0.0
 _r1_xyzrpy_car_rpy_pitch_: 0.0
@@ -20,14 +20,14 @@ _r1_xyzrpy_init_error_xyz_x_: 0.0
 _r1_xyzrpy_init_error_xyz_y_: 0.0
 _r1_xyzrpy_init_error_xyz_z_: 0.0
 _r1_xyzrpy_init_error_rpy_roll_: 0.0
-_r1_xyzrpy_init_error_rpy_pitch_: 0.0
+_r1_xyzrpy_init_error_rpy_pitch_: 0.523133
 _r1_xyzrpy_init_error_rpy_yaw_: 0.0
 
 
 # ====================== r2 车相对雷达 ======================
-_r2_xyzrpy_car_xyz_x_: -0.126
-_r2_xyzrpy_car_xyz_y_: 0.0
-_r2_xyzrpy_car_xyz_z_: -0.837
+_r2_xyzrpy_car_xyz_x_:  0.3304      # 0.338        #0.317327
+_r2_xyzrpy_car_xyz_y_:  -0.0199     #0.0253          #0.0253            #0.022
+_r2_xyzrpy_car_xyz_z_:  0.763     #-0.788
 _r2_xyzrpy_car_rpy_roll_: 0.0
 _r2_xyzrpy_car_rpy_pitch_: 0.0
 _r2_xyzrpy_car_rpy_yaw_: 0.0
@@ -46,7 +46,7 @@ _r2_xyzrpy_init_error_xyz_x_: 0.0
 _r2_xyzrpy_init_error_xyz_y_: 0.0
 _r2_xyzrpy_init_error_xyz_z_: 0.0
 _r2_xyzrpy_init_error_rpy_roll_: 0.0
-_r2_xyzrpy_init_error_rpy_pitch_: 0.0
+_r2_xyzrpy_init_error_rpy_pitch_: -0.5227889
 _r2_xyzrpy_init_error_rpy_yaw_: 0.0
 
 
@@ -68,7 +68,7 @@ _max_serial_num_: 10
 # ====================== 重定位参数 ======================
 _voxeldownsample_threshold_for_teaser_: 0.3
 _voxeldownsample_threshold_for_icp_: 0.5
-_setmaxcorrespondencedistance_nano_gicp_: 0.55
+_setmaxcorrespondencedistance_nano_gicp_: 0.60
 _min_num_of_point_cloud_for_relocation_: 20000
 
 #=============建图下采样参数===================
@@ -88,22 +88,46 @@ camera_cx_1080: 960.1845
 camera_cy_1080: 540.2312
 
 # ====================== 雷达到相机外参矩阵 (4x4 变换矩阵) ======================
-lidar_to_camera_00: -0.0293067
-lidar_to_camera_01: -0.999359
-lidar_to_camera_02: -0.0205564
-lidar_to_camera_03: 0.0519757
-lidar_to_camera_10: 0.0195515
-lidar_to_camera_11: 0.0199882
-lidar_to_camera_12: -0.999609
-lidar_to_camera_13: 0.47424
-lidar_to_camera_20: 0.999379
-lidar_to_camera_21: -0.0296971
-lidar_to_camera_22: 0.0189532
-lidar_to_camera_23: 0.336381
-lidar_to_camera_30: 0.0
-lidar_to_camera_31: 0.0
-lidar_to_camera_32: 0.0
-lidar_to_camera_33: 1.0
+lidar_to_camera_00: -0.029920201647552
+lidar_to_camera_01: -0.999521197662010
+lidar_to_camera_02: -0.007883968396196
+lidar_to_camera_03: 0.083218510807815
+lidar_to_camera_10: 0.014270216766149
+lidar_to_camera_11: 0.007459550123446
+lidar_to_camera_12: -0.999870349608090
+lidar_to_camera_13: 0.451055598328893
+lidar_to_camera_20: 0.999450420204433
+lidar_to_camera_21: -0.030028828419674
+lidar_to_camera_22: 0.014040192909104
+lidar_to_camera_23: 0.368773511344850
+lidar_to_camera_30: 0.000000000000000
+lidar_to_camera_31: 0.000000000000000
+lidar_to_camera_32: 0.000000000000000
+lidar_to_camera_33: 1.000000000000000
 
+# 发布频率
+_laser_pub_hz_: 200
+
+
+#ekf
+_q_pos_: 0.003
+_q_att_: 0.003
+_q_vel_: 0.03
+_q_ang_: 0.03
+
+# ====================== 雷达自己的初始误差 ======================
+
+_lidar_xyzrpy_init_error_xyz_x_: 0.01550518
+_lidar_xyzrpy_init_error_xyz_y_: 0.01867163
+_lidar_xyzrpy_init_error_xyz_z_: 0
+_lidar_xyzrpy_init_error_rpy_roll_: 0
+_lidar_xyzrpy_init_error_rpy_pitch_: 0
+_lidar_xyzrpy_init_error_rpy_yaw_: 0
+
+#camera_kfs
+_camera_x_bias_: 0.0
+_camera_y_bias_: 0.0
+_camera_z_bias_: 0.0
+_max_bias_: 0.0
 
 

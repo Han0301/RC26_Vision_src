@@ -18,7 +18,7 @@ mapping:
     extrinsic_est_en: false # for aggressive motion, set this variable false
     imu_time_inte: 0.005 # = 1 / frequency of IMU
     lidar_time_inte: 0.1
-    satu_acc: 16.0 # the saturation value of IMU's acceleration. not related to the units
+    satu_acc: 16 # the saturation value of IMU's acceleration. not related to the units
     satu_gyro: 35 # the saturation value of IMU's angular velocity. not related to the units
     acc_norm: 1.0 # 9.810 # 1.0 for g as unit, 9.81 for m/s^2 as unit of the IMU's acceleration
     lidar_meas_cov: 0.01 # 0.001; 0.01

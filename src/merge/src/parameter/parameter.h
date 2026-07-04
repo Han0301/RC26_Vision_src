@@ -61,7 +61,7 @@ namespace Ten
         extern int _limit_count_2_;
         extern int _limit_count_3_;
         extern int _limit_count_4_;
-        extern std::string _test_datasets_;
+
         //雷达到相机 4x4 变换矩阵
         extern Eigen::Matrix4d _lidar_to_camera_transform_matrix_;
     }
@@ -84,6 +84,27 @@ namespace Ten
     extern double camera_fy_1080;
     extern double camera_cx_1080;
     extern double camera_cy_1080;
+    extern double _laser_pub_hz_;
+
+    //ekf
+    extern double _q_pos_;   // 位置过程噪声系数
+    extern double _q_att_;   // 姿态过程噪声系数
+    extern double _q_vel_;   // 线速度过程噪声系数
+    extern double _q_ang_;   // 角速度过程噪声系数
+
+    //雷达自己的初始误差
+    extern double _lidar_xyzrpy_init_error_xyz_x_;
+    extern double _lidar_xyzrpy_init_error_xyz_y_;
+    extern double _lidar_xyzrpy_init_error_xyz_z_;
+    extern double _lidar_xyzrpy_init_error_rpy_roll_;
+    extern double _lidar_xyzrpy_init_error_rpy_pitch_;
+    extern double _lidar_xyzrpy_init_error_rpy_yaw_;
+
+    //camera_kfs
+    extern double _camera_x_bias_;
+    extern double _camera_y_bias_;
+    extern double _camera_z_bias_;
+    extern double _max_bias_;
 
     namespace parameter
     {
@@ -150,7 +171,7 @@ namespace Ten
             superstratum::_limit_count_2_                      = config["_limit_count_2_"].as<int>();
             superstratum::_limit_count_3_                      = config["_limit_count_3_"].as<int>();
             superstratum::_limit_count_4_                      = config["_limit_count_4_"].as<int>();
-            superstratum::_test_datasets_                      = config["_test_datasets_"].as<std::string>();
+
             // ==============================================
             // 全局变量赋值
             // ==============================================
@@ -195,6 +216,29 @@ namespace Ten
             Ten::superstratum::_lidar_to_camera_transform_matrix_(3,1) = config["lidar_to_camera_31"].as<double>();
             Ten::superstratum::_lidar_to_camera_transform_matrix_(3,2) = config["lidar_to_camera_32"].as<double>();
             Ten::superstratum::_lidar_to_camera_transform_matrix_(3,3) = config["lidar_to_camera_33"].as<double>();
+
+            Ten::_laser_pub_hz_                                = config["_laser_pub_hz_"].as<double>();
+
+
+            Ten::_q_pos_                                = config["_q_pos_"].as<double>();
+            Ten::_q_att_                                = config["_q_att_"].as<double>();
+            Ten::_q_vel_                                = config["_q_vel_"].as<double>();
+            Ten::_q_ang_                                = config["_q_ang_"].as<double>();
+
+            Ten::_lidar_xyzrpy_init_error_xyz_x_              = config["_lidar_xyzrpy_init_error_xyz_x_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_xyz_y_              = config["_lidar_xyzrpy_init_error_xyz_y_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_xyz_z_              = config["_lidar_xyzrpy_init_error_xyz_z_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_rpy_roll_           = config["_lidar_xyzrpy_init_error_rpy_roll_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_rpy_pitch_          = config["_lidar_xyzrpy_init_error_rpy_pitch_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_rpy_yaw_            = config["_lidar_xyzrpy_init_error_rpy_yaw_"].as<double>();
+
+
+             //camera_kfs
+            Ten::_camera_x_bias_                                = config["_camera_x_bias_"].as<double>();
+            Ten::_camera_y_bias_                                = config["_camera_y_bias_"].as<double>();
+            Ten::_camera_z_bias_                                = config["_camera_z_bias_"].as<double>();
+            Ten::_max_bias_                                     = config["_max_bias_"].as<double>();
+
 
             // ==============================================
             // 【全部打印】加载完成后输出所有参数
@@ -284,6 +328,29 @@ namespace Ten
 
             std::cout << "\n--- 雷达到相机外参变换矩阵 (4x4) ---" << std::endl;
             std::cout << Ten::superstratum::_lidar_to_camera_transform_matrix_ << std::endl;
+
+            std::cout << "\n--- 雷达发布频率 ---" << std::endl;
+            std::cout << "_laser_pub_hz_:   " << Ten::_laser_pub_hz_ << std::endl;
+
+            std::cout << "\n--- ekf ---" << std::endl;
+            std::cout << "_q_pos_:   " << Ten::_q_pos_ << std::endl;
+            std::cout << "_q_att_:   " << Ten::_q_att_ << std::endl;
+            std::cout << "_q_vel_:   " << Ten::_q_vel_ << std::endl;
+            std::cout << "_q_ang_:   " << Ten::_q_ang_ << std::endl;
+
+            std::cout << "\n--- 雷达自己的初始误差 ---" << std::endl;
+            std::cout << "_lidar_xyzrpy_init_error_xyz_x_:             " << Ten::_lidar_xyzrpy_init_error_xyz_x_ << std::endl;
+            std::cout << "_lidar_xyzrpy_init_error_xyz_y_:             " << Ten::_lidar_xyzrpy_init_error_xyz_y_ << std::endl;
+            std::cout << "_lidar_xyzrpy_init_error_xyz_z_:             " << Ten::_lidar_xyzrpy_init_error_xyz_z_ << std::endl;
+            std::cout << "_lidar_xyzrpy_init_error_rpy_roll_:          " << Ten::_lidar_xyzrpy_init_error_rpy_roll_ << std::endl;
+            std::cout << "_lidar_xyzrpy_init_error_rpy_pitch_:         " << Ten::_lidar_xyzrpy_init_error_rpy_pitch_ << std::endl;
+            std::cout << "_lidar_xyzrpy_init_error_rpy_yaw_:           " << Ten::_lidar_xyzrpy_init_error_rpy_yaw_ << std::endl;
+
+            std::cout << "\n--- camera_kfs ---" << std::endl;
+            std::cout << "_camera_x_bias_:   " << Ten::_camera_x_bias_ << std::endl;
+            std::cout << "_camera_y_bias_:   " << Ten::_camera_y_bias_ << std::endl;
+            std::cout << "_camera_z_bias_:   " << Ten::_camera_z_bias_ << std::endl;
+            std::cout << "_max_bias_:   " << Ten::_max_bias_ << std::endl;
 
             std::cout << "\n==========================================================\n" << std::endl;
         }

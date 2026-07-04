@@ -1,8 +1,16 @@
 #ifndef __COORDINATE_H_
 #define __COORDINATE_H_
 
-#include "method_math.h"
+#include "method_math_new.h"
+#include "./parameter/parameter.h"
 
+// //雷达自己的初始误差
+// extern double _lidar_xyzrpy_init_error_xyz_x_;
+// extern double _lidar_xyzrpy_init_error_xyz_y_;
+// extern double _lidar_xyzrpy_init_error_xyz_z_;
+// extern double _lidar_xyzrpy_init_error_rpy_roll_;
+// extern double _lidar_xyzrpy_init_error_rpy_pitch_;
+// extern double _lidar_xyzrpy_init_error_rpy_yaw_;
 
 namespace Ten
 {
@@ -10,9 +18,21 @@ namespace Ten
     class Ten_coordinate
     {
     public:
-        Ten_coordinate(){}
+        Ten_coordinate()
+        {
+
+        }
         ~Ten_coordinate(){}
 
+        void init()
+        {
+            lidar_state_error_._xyz._x = _lidar_xyzrpy_init_error_xyz_x_;
+            lidar_state_error_._xyz._y = _lidar_xyzrpy_init_error_xyz_y_;
+            lidar_state_error_._xyz._z = _lidar_xyzrpy_init_error_xyz_z_;
+            lidar_state_error_._rpy._roll = _lidar_xyzrpy_init_error_rpy_roll_;
+            lidar_state_error_._rpy._pitch = _lidar_xyzrpy_init_error_rpy_pitch_;
+            lidar_state_error_._rpy._yaw = _lidar_xyzrpy_init_error_rpy_yaw_;
+        }
         /**
          * @brief 设置lidar坐标系到车坐标系的坐标变换
          * @param lidartocar: lidar坐标系到车坐标系的旋转平移
@@ -76,6 +96,16 @@ namespace Ten
         }
 
         /**
+         * @brief 得到雷达到车的变换
+         * @param Eigen::Matrix4d: 雷达到车的变换
+         */
+        Eigen::Matrix4d get_lidar_state_error()
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            return XYZRPYtotransform_matrix(lidar_state_error_);
+        }
+
+        /**
          * @brief 得到世界到雷达变换
          * @param Eigen::Matrix4d: 世界到雷达变换
          */
@@ -84,7 +114,7 @@ namespace Ten
             std::lock_guard<std::mutex> lock(mtx_);
             Eigen::Matrix4d T1 = XYZRPYtotransform_matrix(lidartocar_);
             Eigen::Matrix4d T1_N = T1.inverse();
-            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtolidar_ - stead_state_error_);
+            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtolidar_- stead_state_error_);
             Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
             Eigen::Matrix4d mix;
             if(world2toworld1_ == Ten::XYZRPY())
@@ -99,7 +129,7 @@ namespace Ten
         }
 
         /**
-         * @brief 车相对于世界坐标的位姿
+         * @brief 车相对于世界坐标的位姿 动轴
          * @param Ten::XYZRPY: 车相对于世界坐标的位姿
          */
         Ten::XYZRPY getXYZRPY()
@@ -107,17 +137,54 @@ namespace Ten
             std::lock_guard<std::mutex> lock(mtx_);
             Eigen::Matrix4d T1 = XYZRPYtotransform_matrix(lidartocar_);
             Eigen::Matrix4d T1_N = T1.inverse();
-            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtolidar_ - stead_state_error_);
+            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtolidar_- stead_state_error_);
             Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
-            Eigen::Matrix4d mix = T1 * T2 * T3 * T1_N;
+            Eigen::Matrix4d mix = T1  * T2 * T3 * T1_N;
             XYZRPY xyzrpy = transform_matrixtoXYZRPY(mix); 
             return xyzrpy;
         }
 
+        /**
+         * @brief 车相对于世界坐标的位姿 固定轴
+         * @param Ten::XYZRPY: 车相对于世界坐标的位姿
+         */
+        Ten::XYZRPY getXYZRPY_incline()
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            Eigen::Matrix4d T1 = XYZRPYtotransform_matrix(lidartocar_);
+            Eigen::Matrix4d T1_N = T1.inverse();
+            Eigen::Matrix4d T4 = Ten::math::XYZRPYtotransform_matrix_fixed(stead_state_error_);
+            Eigen::Matrix4d T2 = T4 * (Ten::math::XYZRPYtotransform_matrix_fixed(worldtolidar_).inverse());
+            Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
+            Eigen::Matrix4d mix = T1  * T2 * T3 * T1_N;
+            XYZRPY xyzrpy = Ten::transform_matrixtoXYZRPY(mix); 
+            //XYZRPY xyzrpy = Ten::math::transform_matrixtoXYZRPY_fixed(mix.inverse()); 
+            return xyzrpy;
+        }
+
+        // /**
+        //  * @brief 车相对于世界坐标的位姿 固定轴 包含雷达误差 
+        //  * @param Ten::XYZRPY: 车相对于世界坐标的位姿
+        //  */
+        // Ten::XYZRPY getXYZRPY_incline_2()
+        // {
+        //     std::lock_guard<std::mutex> lock(mtx_);
+        //     Eigen::Matrix4d lidar_error = XYZRPYtotransform_matrix(lidar_state_error_);
+        //     Eigen::Matrix4d lidar_error_inverse = lidar_error.inverse();
+        //     Eigen::Matrix4d T1 = XYZRPYtotransform_matrix(lidartocar_);
+        //     Eigen::Matrix4d T1_N = T1.inverse();
+        //     Eigen::Matrix4d T4 = Ten::math::XYZRPYtotransform_matrix_fixed(stead_state_error_);
+        //     Eigen::Matrix4d T2 = T4 * (Ten::math::XYZRPYtotransform_matrix_fixed(worldtolidar_).inverse());
+        //     Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
+        //     Eigen::Matrix4d mix = T1 * lidar_error * T2 * T3 * lidar_error_inverse * T1_N;
+        //     XYZRPY xyzrpy = Ten::transform_matrixtoXYZRPY(mix); 
+        //     //XYZRPY xyzrpy = Ten::math::transform_matrixtoXYZRPY_fixed(mix.inverse()); 
+        //     return xyzrpy;
+        // }
 
 
     private:
-
+    Ten::XYZRPY lidar_state_error_;
     Ten::XYZRPY lidartocar_;
     Ten::XYZRPY worldtolidar_;
     Ten::XYZRPY world2toworld1_;

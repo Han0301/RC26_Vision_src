@@ -42,9 +42,12 @@
 #include "./../../point_lio/src/li_initialization.h"
 #include "./../../lidar.h"
 
+#include "livox_lidar_api.h"
+
+
 //bool _is_running_ = false;
-std::atomic<bool> _is_running_{false};
-std::atomic<bool> _is_revise_{true};
+// std::atomic<bool> _is_running_{false};
+// std::atomic<bool> _is_revise_{true};
 // extern std::mutex _lasermapping_;
 // extern bool __lasermapping_running_ ;
 // void imu_cbk2(const sensor_msgs::Imu::ConstPtr &msg_in); 
@@ -130,11 +133,11 @@ int Lddc::RegisterLds(Lds *lds) {
 
 void Lddc::DistributePointCloudData(void) {
   if (!lds_) {
-    std::cout << "lds is not registered" << std::endl;
+    //std::cout << "lds is not registered" << std::endl;
     return;
   }
   if (lds_->IsRequestExit()) {
-    std::cout << "DistributePointCloudData is RequestExit" << std::endl;
+    //std::cout << "DistributePointCloudData is RequestExit" << std::endl;
     return;
   }
   
@@ -152,11 +155,11 @@ void Lddc::DistributePointCloudData(void) {
 
 void Lddc::DistributeImuData(void) {
   if (!lds_) {
-    std::cout << "lds is not registered" << std::endl;
+    //std::cout << "lds is not registered" << std::endl;
     return;
   }
   if (lds_->IsRequestExit()) {
-    std::cout << "DistributeImuData is RequestExit" << std::endl;
+    //std::cout << "DistributeImuData is RequestExit" << std::endl;
     return;
   }
   
@@ -286,25 +289,25 @@ void Lddc::PublishCustomPointcloud(LidarDataQueue *queue, uint8_t index) {
     CustomMsg livox_msg;
     InitCustomMsg(livox_msg, pkg, index);
     FillPointsToCustomMsg(livox_msg, pkg);
-    if( _is_running_.load() == false)
+    // if( _is_running_.load() == false)
+    // {
+    //   std::lock_guard<std::mutex> lock(_lasermapping_);
+    //   _is_running_.store(__lasermapping_running_);
+    // }
+    if(__lasermapping_running_.load())
     {
-      std::lock_guard<std::mutex> lock(_lasermapping_);
-      _is_running_.store(__lasermapping_running_);
-    }
-    if( _is_running_.load())
-    {
-      if(_is_revise_.load())
-      {
-        #ifdef _R1_R1_
-          revise_lidar_R1(livox_msg);
-        #elif defined(_R2_R2_)
-          revise_lidar_R2(livox_msg);
-        #else
-          ;
-        #endif
-      }
+      // if(_is_revise_.load())
+      // {
+      //   #ifdef _R1_R1_
+      //     revise_lidar_R1(livox_msg);
+      //   #elif defined(_R2_R2_)
+      //     revise_lidar_R2(livox_msg);
+      //   #else
+      //     ;
+      //   #endif
+      // }
       livox_pcl_cbk2(boost::make_shared<const livox_ros_driver::CustomMsg>(livox_msg));
-      Ten::_LIVOX_GET_.write_data(livox_msg);
+      //Ten::_LIVOX_GET_.write_data(livox_msg);
     }
     
     PublishCustomPointData(livox_msg, index);
@@ -588,10 +591,10 @@ void Lddc::PublishImuData(LidarImuDataQueue& imu_data_queue, const uint8_t index
   ImuMsg imu_msg;
   uint64_t timestamp;
   InitImuMsg(imu_data, imu_msg, timestamp);
-  if( _is_running_.load())
+  if(__lasermapping_running_.load())
   {
     imu_cbk2(boost::make_shared<const sensor_msgs::Imu>(imu_msg));
-    //Ten::_IMU_GET_.write_data(imu_msg);
+    Ten::_IMU_GET_.push(imu_msg);
   }
 #ifdef BUILDING_ROS1
   PublisherPtr publisher_ptr = GetCurrentImuPublisher(index);

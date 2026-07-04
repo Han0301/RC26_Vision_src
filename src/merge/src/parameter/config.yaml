@@ -1,6 +1,6 @@
 # ====================== r1 车相对雷达 ======================
-_r1_xyzrpy_car_xyz_x_: -0.40944
-_r1_xyzrpy_car_xyz_y_: 0.45344        # 0.40944 + 0.088/2
+_r1_xyzrpy_car_xyz_x_: -0.465
+_r1_xyzrpy_car_xyz_y_: 0.025        # 0.40944 + 0.088/2
 _r1_xyzrpy_car_xyz_z_: 0.0
 _r1_xyzrpy_car_rpy_roll_: 0.0
 _r1_xyzrpy_car_rpy_pitch_: 0.0
@@ -20,14 +20,14 @@ _r1_xyzrpy_init_error_xyz_x_: 0.0
 _r1_xyzrpy_init_error_xyz_y_: 0.0
 _r1_xyzrpy_init_error_xyz_z_: 0.0
 _r1_xyzrpy_init_error_rpy_roll_: 0.0
-_r1_xyzrpy_init_error_rpy_pitch_: 0.0
+_r1_xyzrpy_init_error_rpy_pitch_: 0.523133
 _r1_xyzrpy_init_error_rpy_yaw_: 0.0
 
 
 # ====================== r2 车相对雷达 ======================
-_r2_xyzrpy_car_xyz_x_: -0.126
-_r2_xyzrpy_car_xyz_y_: 0.0
-_r2_xyzrpy_car_xyz_z_: -0.837
+_r2_xyzrpy_car_xyz_x_: 0.332280     # 0.338        #0.317327
+_r2_xyzrpy_car_xyz_y_:  -0.002043     #0.0253          #0.0253            #0.022
+_r2_xyzrpy_car_xyz_z_: -0.763     #-0.788
 _r2_xyzrpy_car_rpy_roll_: 0.0
 _r2_xyzrpy_car_rpy_pitch_: 0.0
 _r2_xyzrpy_car_rpy_yaw_: 0.0
@@ -46,29 +46,29 @@ _r2_xyzrpy_init_error_xyz_x_: 0.0
 _r2_xyzrpy_init_error_xyz_y_: 0.0
 _r2_xyzrpy_init_error_xyz_z_: 0.0
 _r2_xyzrpy_init_error_rpy_roll_: 0.0
-_r2_xyzrpy_init_error_rpy_pitch_: 0.0
+_r2_xyzrpy_init_error_rpy_pitch_: -0.532019
 _r2_xyzrpy_init_error_rpy_yaw_: 0.0
 
 
 # ====================== 识别路径 / 检测 ======================
 _coner_path_: "/home/robocon/rc2026/model/corner5/best"
-_juanzhou_path_: "/home/h/下载/卷轴分类1_仿真+现实_32类/best"
-_box_num_: 8
+_juanzhou_path_: "/home/robocon/rc2026/model/juanZhou_cls1/best"
+_box_num_: 5
 
 # ====================== 识别路径2 / 检测 ======================
-_roi12_path_: "/home/h/下载/roi12_atten_red17/roi12_atten_red17" 
+_roi12_path_: "/home/h/下载/yolo11s_roi12_atten_17/yolo11s_roi12_atten_17" 
 _limit_count_1_: 3
 _limit_count_2_: 3
 _limit_count_3_: 2
 _limit_count_4_: 4
-_test_datasets_: "/home/h/图片/test_datas_red"
+
 # ====================== 串口 ======================
 _max_serial_num_: 10
 
 # ====================== 重定位参数 ======================
 _voxeldownsample_threshold_for_teaser_: 0.3
 _voxeldownsample_threshold_for_icp_: 0.5
-_setmaxcorrespondencedistance_nano_gicp_: 0.55
+_setmaxcorrespondencedistance_nano_gicp_: 0.60
 _min_num_of_point_cloud_for_relocation_: 20000
 
 #=============建图下采样参数===================
@@ -105,5 +105,29 @@ lidar_to_camera_31: 0.000000000000000
 lidar_to_camera_32: 0.000000000000000
 lidar_to_camera_33: 1.000000000000000
 
+# 发布频率
+_laser_pub_hz_: 200
+
+
+#ekf
+_q_pos_: 0.003
+_q_att_: 0.003
+_q_vel_: 0.03
+_q_ang_: 0.03
+
+# ====================== 雷达自己的初始误差 ======================
+
+_lidar_xyzrpy_init_error_xyz_x_: 0.0 #0.01550518
+_lidar_xyzrpy_init_error_xyz_y_: 0.0 #0.01867163
+_lidar_xyzrpy_init_error_xyz_z_: 0
+_lidar_xyzrpy_init_error_rpy_roll_: 0
+_lidar_xyzrpy_init_error_rpy_pitch_: 0
+_lidar_xyzrpy_init_error_rpy_yaw_: 0
+
+#camera_kfs
+_camera_x_bias_: 0.0
+_camera_y_bias_: 0.0
+_camera_z_bias_: 0.0
+_max_bias_: 0.0
 
 

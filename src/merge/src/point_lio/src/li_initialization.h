@@ -2,6 +2,7 @@
 #include "./../../lidar.h"
 #include "../include/common_lib.h"
 #include "Estimator.h"
+#include "./../../threadpool.h"
 #define MAXN                (720000)
 
 extern bool data_accum_finished, data_accum_start, online_calib_finish, refine_print;
@@ -36,8 +37,8 @@ void imu_cbk2(const sensor_msgs::Imu::ConstPtr &msg_in);
 bool sync_packages(MeasureGroup &meas);
 
 
-extern std::mutex _lasermapping_;
-extern bool __lasermapping_running_;
-
+// extern std::mutex _lasermapping_;
+// extern bool __lasermapping_running_;
+extern std::atomic<bool> __lasermapping_running_;
 
 // #endif
