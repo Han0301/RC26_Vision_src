@@ -14,6 +14,7 @@
 #include <malloc.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include "./../../threadpool.h"
 // #include <cv_bridge/cv_bridge.h>
 // #include "matplotlibcpp.h"
 // #include <ros/console.h>
@@ -52,12 +53,12 @@ nav_msgs::Path path;
 nav_msgs::Odometry odomAftMapped;
 geometry_msgs::PoseStamped msg_body_pose;
 
-void SigHandle(int sig)
-{
-    flg_exit = true;
-    ROS_WARN("catch sig %d", sig);
-    sig_buffer.notify_all();
-}
+// void SigHandle(int sig)
+// {
+//     flg_exit = true;
+//     ROS_WARN("catch sig %d", sig);
+//     sig_buffer.notify_all();
+// }
 
 inline void dump_lio_state_to_log(FILE *fp)  
 {
@@ -517,7 +518,7 @@ int laserMapping()
     // ros::Publisher plane_pub = nh.advertise<visualization_msgs::Marker>
             // ("/planner_normal", 1000);
 //------------------------------------------------------------------------------------------------------
-    signal(SIGINT, SigHandle);
+    //signal(SIGINT, SigHandle);
     ros::Rate loop_rate(200);
     //----------------------------------
     int _is_pub_in_may_step = 0;
@@ -529,7 +530,7 @@ int laserMapping()
         __lasermapping_running_ = true;
     }
 
-    while (status)
+    while (Ten::_TREADPOOL_FLAG_.read_flag())
     {
         if (flg_exit) break;
         ros::spinOnce();
@@ -1215,7 +1216,15 @@ int laserMapping()
                 dump_lio_state_to_log(fp);
             }
         }
-        status = ros::ok();
+        
+        //status = ros::ok();
+        // if(status == false)
+        // {
+        //     std::cout<< "status == false" << std::endl;
+        //     Ten::_TREADPOOL_FLAG_.set_flag(status);
+        // }
+        // std::cout << "Ten::_TREADPOOL_FLAG_.set_flag(status);"<< std::endl;
+        
         loop_rate.sleep();
     }
     //--------------------------save map-----------------------------------

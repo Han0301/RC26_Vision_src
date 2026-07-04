@@ -63,9 +63,10 @@ struct G
         // 3. 畸变系数（假设零畸变）
         _distCoeffs = cv::Mat::zeros(5, 1, CV_64F);
 
+
         
-        _rvec = (cv::Mat_<double>(3,1) << 1.168756,-1.442224,1.327117); // 旋转（弧度）
-        _tvec = (cv::Mat_<double>(3,1) << 0.206341,0.395983,2.094550);   // 平移（米）
+        _rvec = (cv::Mat_<double>(3,1) << 1.2126, -1.2788, 1.2281); // 旋转（弧度）
+        _tvec = (cv::Mat_<double>(3,1) << 0.0214, 0.3877, 0.4997);   // 平移（米）
 
         // 1. 定义3D点（世界坐标）
         //std::vector<cv::Point3f> objectPoints;

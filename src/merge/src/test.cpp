@@ -16,6 +16,8 @@
 #include "velocity.h"
 #include <std_msgs/Float32MultiArray.h>
 #include "recognition/world_to_camera.h"
+#include "calibration.h"
+#include "log/logger.h"
 
 void test()
 {
@@ -407,7 +409,13 @@ void test_transform()
     urcu_memb_unregister_thread();
 }
 
-
+void test_save()
+{
+    urcu_memb_register_thread();
+    Ten::Ten_logger::GetInstance();
+    Ten::Ten_logger::GetInstance().record_odometry(Ten::_TF_GET_.read_data());
+    urcu_memb_unregister_thread();
+}
 
 
 

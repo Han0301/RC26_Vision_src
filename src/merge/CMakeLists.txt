@@ -4,8 +4,8 @@ project(merge)
 
 
 
-SET(CMAKE_BUILD_TYPE "Debug")
-# set(CMAKE_BUILD_TYPE "Release")
+#SET(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 # set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -std=c++17")
 
 ADD_COMPILE_OPTIONS(-std=c++17)
@@ -317,6 +317,9 @@ target_sources(merge_node
   src/camera.cpp
   src/coordinate.cpp
   src/velocity.cpp
+  src/calibration.cpp
+  src/threadpool.cpp
+  src/log/logger.cpp
   src/recognition/world_to_camera.cpp
   src/recognition/zbuffer_simplify.cpp
   src/livox_ros_driver2/src/driver_node.cpp

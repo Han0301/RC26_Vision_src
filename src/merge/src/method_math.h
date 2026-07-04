@@ -15,7 +15,7 @@
 // PCL点类型和点云头文件
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-
+#include <pcl/io/pcd_io.h>         // PCD 格式读写
 
 namespace Ten
 {
@@ -179,7 +179,7 @@ namespace Ten
     }
 
 
-    #define EPS 1e-6
+    //#define EPS 1e-6
     /**
      * @brief Eigen旋转矩阵转欧拉角（Z-Y-X 顺序：Yaw-Pitch-Roll）
      * @param R 3x3 Eigen旋转矩阵

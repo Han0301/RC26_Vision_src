@@ -14,7 +14,7 @@
 #include "lds_lidar.h"
 #include "./../../lidar.h"
 #include "livox_ros_driver.h"
-
+#include "./../../threadpool.h"
 using namespace livox_ros;
 
 namespace Ten
@@ -171,7 +171,7 @@ void DriverNode::PointCloudDataPollThread()
     do {
         lddc_ptr_->DistributePointCloudData();
         status = future_.wait_for(std::chrono::microseconds(0));
-    } while (status == std::future_status::timeout);
+    } while ((status == std::future_status::timeout));
     //urcu_memb_unregister_thread();
 }
 
@@ -183,7 +183,7 @@ void DriverNode::ImuDataPollThread()
     do {
         lddc_ptr_->DistributeImuData();
         status = future_.wait_for(std::chrono::microseconds(0));
-    } while (status == std::future_status::timeout);
+    } while ((status == std::future_status::timeout));
     //urcu_memb_unregister_thread();
 }
 

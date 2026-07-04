@@ -29,6 +29,16 @@ namespace Ten
         }
 
         /**
+         * @brief 设置上一个世界坐标系到当前世界坐标系的坐标变换
+         * @param world2toworld1: 上一个世界坐标系到当前世界坐标系的旋转平移
+         */
+        void set_world2toworld1(Ten::XYZRPY world2toworld1)
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            world2toworld1_ = world2toworld1;
+        }   
+
+        /**
          * @brief 设置稳态误差
          * @param error: 稳态误差
          */
@@ -48,8 +58,11 @@ namespace Ten
         {
             std::lock_guard<std::mutex> lock(mtx_);
             //点云转换
+            Ten::XYZRPY nworldtocurrent = worldtocurrent_ - error_;
             pcl::PointCloud<pcl::PointXYZ>::Ptr current(new pcl::PointCloud<pcl::PointXYZ>(world->size(), 1));
-            Eigen::Matrix4d T = worldtocurrent(worldtocurrent_._xyz, worldtocurrent_._rpy);
+            Eigen::Matrix4d T_world_to_current = worldtocurrent(nworldtocurrent._xyz, nworldtocurrent._rpy);
+            Eigen::Matrix4d T_world2_to_world = worldtocurrent(world2toworld1_._xyz, world2toworld1_._rpy);
+            Eigen::Matrix4d T = T_world_to_current * T_world2_to_world;
             pcl::transformPointCloud(*world, *current, T);
             pcl::transformPointCloud(*current, *camera, camerainfo_.extrinsic());
             //相机转换
@@ -82,6 +95,7 @@ namespace Ten
     Ten::Ten_camerainfo camerainfo_;
     private:
     Ten::XYZRPY worldtocurrent_;
+    Ten::XYZRPY world2toworld1_;
     Ten::XYZRPY error_;
     mutable std::mutex mtx_;
     };

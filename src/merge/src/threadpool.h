@@ -82,6 +82,10 @@ public:
         _condition.notify_one();
     }
 
+
+
+
+
 private:
     std::vector<std::thread> _threads;
     std::queue<std::function<void()>> _tasks;
@@ -91,8 +95,45 @@ private:
     std::condition_variable _condition;
 
     bool _stop;
+
+
 };
 
+class ThreadPool_flag
+{
+public:
+
+    ThreadPool_flag()
+    :flag_(true)
+    {
+
+    }
+    /**
+        @brief 设置flag标志位
+        @param flag：true运行，false终止
+    */
+    void set_flag(bool flag)
+    {
+        flag_.store(flag);
+    }
+
+   /**
+       @brief 读取flag标志位
+       @return bool：true运行，false终止
+   */
+    bool read_flag()
+    {
+        return flag_.load();
+    }
+private:
+    //兼容ros
+    std::atomic<bool> flag_;
+
+};
+
+
+
+extern Ten::ThreadPool_flag _TREADPOOL_FLAG_;
 
 }
 

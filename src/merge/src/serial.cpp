@@ -270,8 +270,7 @@ namespace Ten
         if(!ten_serial->serial_.isOpen())
         {
             std::cout<<"ten_serial->serial_ is no open!"<<std::endl;
-            Ten_serial* tmp = nullptr;
-            return *tmp;
+            exit(-1);
         }
         return *ten_serial;
     }
@@ -317,6 +316,56 @@ namespace Ten
         }
         return checksum;
     }
+
+        /**
+     * @brief 清空串口缓冲区（接收+发送），清除残留的脏数据
+     * @param clear_type: 清空类型（0=全清，1=仅接收，2=仅发送）
+     * @return bool 清空是否成功（串口未打开/空指针返回false）
+     */
+    bool Ten_serial::clearBuffer(int clear_type) {
+        // 加锁：避免和读写操作冲突，保证线程安全
+        std::lock_guard<std::mutex> lock(send_mtx_);
+        std::lock_guard<std::mutex> lock2(read_mtx_);
+
+        // 空指针检查
+        if (this == nullptr) {
+            std::cout << "Ten_serial实例为空，无法清空缓冲区！" << std::endl;
+            return false;
+        }
+
+        // 串口未打开检查
+        if (!serial_.isOpen()) {
+            std::cout << "串口未打开，无法清空缓冲区！" << std::endl;
+            return false;
+        }
+
+        try {
+            switch (clear_type) {
+                case 0: // 清空接收+发送缓冲区（默认）
+                    serial_.flush(); // serial库的flush() = 清空接收+发送
+                    break;
+                case 1: // 仅清空接收缓冲区
+                    serial_.flushInput();
+                    break;
+                case 2: // 仅清空发送缓冲区
+                    serial_.flushOutput();
+                    break;
+                default:
+                    std::cout << "清空类型错误，默认清空所有缓冲区！" << std::endl;
+                    serial_.flush();
+                    break;
+            }
+            std::cout << "串口缓冲区清空成功（类型：" << clear_type << "）" << std::endl;
+            return true;
+        } catch (const serial::IOException& e) {
+            // 捕获serial库的IO异常（如串口断开）
+            std::cout << "清空缓冲区失败：" << e.what() << std::endl;
+            return false;
+        }
+    }
+
+
+
 }
 
 

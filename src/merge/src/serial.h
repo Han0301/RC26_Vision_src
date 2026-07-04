@@ -51,12 +51,19 @@ public:
         return serial_.isOpen();
     }
 
+
+    /**
+     * @brief 清空串口缓冲区（接收+发送），清除残留的脏数据
+     * @param clear_type: 清空类型（0=全清，1=仅接收，2=仅发送）
+     * @return bool 清空是否成功（串口未打开/空指针返回false）
+     */
+    bool clearBuffer(int clear_type = 0);
+
     ~Ten_serial()
     {
         std::lock_guard<std::mutex> lock_s(send_mtx_);
         std::lock_guard<std::mutex> lock_r(read_mtx_);
-        if (serial_.isOpen())
-            serial_.close();
+        if (serial_.isOpen())serial_.close();
     }
 
 

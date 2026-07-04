@@ -3,13 +3,59 @@
 
 #include "zbuffer_simplify.h"
 
+
 namespace Ten
 {
     // ---------------------------------------------------------------------------------------------------------------------
+    void Ten_zbuffer_simplify::set_box_lists_init(
+        const std::vector<cv::Point3f>& C_object_points,
+        const std::vector<cv::Point3f>& C_plum_points,
+        const std::vector<cv::Point2f>& object_2d_points,
+        const std::vector<cv::Point2f>& plum_2d_points,
+        std::vector<std::vector<surface_2d_point>>& object_2d_points_,
+        std::vector<std::vector<surface_2d_point>>& plum_2d_points_
+    ){
+        std::vector<surface_2d_point> object_2d_front_points_;
+        std::vector<surface_2d_point> object_2d_side_points_;
+        std::vector<surface_2d_point> object_2d_up_points_;
+        std::vector<surface_2d_point> plum_2d_front_points_;
+        std::vector<surface_2d_point> plum_2d_side_points_;
+        std::vector<surface_2d_point> plum_2d_up_points_;
+
+        for (int i = 0;i < 96;i +=8 ){
+            int idx = i / 8 + 1;
+            float object_front_depth = (calc_camera_distance(C_object_points[i]) + calc_camera_distance(C_object_points[i + 1]) + calc_camera_distance(C_object_points[i + 2]) + calc_camera_distance(C_object_points[i + 3])) / 4.0f;
+            float object_left_depth = (calc_camera_distance(C_object_points[i + 4]) + calc_camera_distance(C_object_points[i]) + calc_camera_distance(C_object_points[i + 3]) + calc_camera_distance(C_object_points[i + 7])) / 4.0f; 
+            float object_right_depth = (calc_camera_distance(C_object_points[i + 1]) + calc_camera_distance(C_object_points[i + 5]) + calc_camera_distance(C_object_points[i + 6]) + calc_camera_distance(C_object_points[i + 2])) / 4.0f; 
+            float object_up_depth = (calc_camera_distance(C_object_points[i + 4]) + calc_camera_distance(C_object_points[i + 5]) + calc_camera_distance(C_object_points[i + 1]) + calc_camera_distance(C_object_points[i])) / 4.0f;
+            object_2d_front_points_.push_back({idx,object_2d_points[i],object_2d_points[i + 1], object_2d_points[i + 2], object_2d_points[i + 3],object_front_depth});
+            object_2d_up_points_.push_back({idx,object_2d_points[i + 4],object_2d_points[i + 5], object_2d_points[i + 1], object_2d_points[i],object_up_depth});
+            if (object_left_depth > object_right_depth) {
+                object_2d_side_points_.push_back({idx,object_2d_points[i + 1],object_2d_points[i + 5], object_2d_points[i + 6], object_2d_points[i + 2],object_right_depth});
+            }else{object_2d_side_points_.push_back({idx,object_2d_points[i + 4],object_2d_points[i], object_2d_points[i + 3], object_2d_points[i + 7],object_left_depth});}
+
+            float plum_front_depth = (calc_camera_distance(C_plum_points[i]) + calc_camera_distance(C_plum_points[i + 1]) + calc_camera_distance(C_plum_points[i + 2])+ calc_camera_distance(C_plum_points[i + 3])) / 4.0f;
+            float plum_left_depth = (calc_camera_distance(C_plum_points[i + 4]) + calc_camera_distance(C_plum_points[i]) + calc_camera_distance(C_plum_points[i + 3]) + calc_camera_distance(C_plum_points[i + 7])) / 4.0f; 
+            float plum_right_depth = (calc_camera_distance(C_plum_points[i + 1]) + calc_camera_distance(C_plum_points[i + 5]) + calc_camera_distance(C_plum_points[i + 6]) + calc_camera_distance(C_plum_points[i + 2])) / 4.0f; 
+            float plum_up_depth = (calc_camera_distance(C_plum_points[i + 4]) + calc_camera_distance(C_plum_points[i + 5]) + calc_camera_distance(C_plum_points[i + 1]) + calc_camera_distance(C_plum_points[i])) / 4.0f;
+            plum_2d_front_points_.push_back({idx,plum_2d_points[i],plum_2d_points[i + 1], plum_2d_points[i + 2], plum_2d_points[i + 3],plum_front_depth});
+            plum_2d_up_points_.push_back({idx,plum_2d_points[i + 4],plum_2d_points[i + 5], plum_2d_points[i + 1], plum_2d_points[i],plum_up_depth});
+            if (object_left_depth > object_right_depth) {
+                plum_2d_side_points_.push_back({idx,plum_2d_points[i + 1],plum_2d_points[i + 5], plum_2d_points[i + 6], plum_2d_points[i + 2],plum_right_depth});
+            }else{plum_2d_side_points_.push_back({idx,plum_2d_points[i + 4],plum_2d_points[i], plum_2d_points[i + 3], plum_2d_points[i + 7],plum_left_depth});}  
+        } 
+        object_2d_points_[0] = object_2d_front_points_;
+        object_2d_points_[1] = object_2d_side_points_;
+        object_2d_points_[2] = object_2d_up_points_;
+        plum_2d_points_[0] = plum_2d_front_points_;
+        plum_2d_points_[1] = plum_2d_side_points_;
+        plum_2d_points_[2] = plum_2d_up_points_;
+    };
+
     void Ten_zbuffer_simplify::set_box_lists_(
         const cv::Mat& image,     
-        const std::vector<cv::Point3f>& C_object_plum_points,
-        const std::vector<cv::Point2f>& object_plum_2d_points,
+        const std::vector<std::vector<surface_2d_point>>& object_2d_points_lists,
+        const std::vector<std::vector<surface_2d_point>>& plum_2d_points_lists,
         std::vector<box>& box_lists){
 
         int exist_boxes[12];
@@ -27,53 +73,33 @@ namespace Ten
             }
         }
 
-        std::vector<surface_2d_point> o_front_2d;
-        std::vector<surface_2d_point> o_side_2d;
-        std::vector<surface_2d_point> o_up_2d;
-        std::vector<surface_2d_point> p_front_2d;
-        std::vector<surface_2d_point> p_side_2d;
-        std::vector<surface_2d_point> p_up_2d;
-        for (int i = 0;i < 96;i +=8){
-            int idx = i / 8 + 1;
-            float o_front_depth = (cal_distance(C_object_plum_points[i]) + cal_distance(C_object_plum_points[i + 1]) + cal_distance(C_object_plum_points[i + 2]) + cal_distance(C_object_plum_points[i + 3])) / 4.0f;
-            float o_left_depth = (cal_distance(C_object_plum_points[i + 4]) + cal_distance(C_object_plum_points[i]) + cal_distance(C_object_plum_points[i + 3]) + cal_distance(C_object_plum_points[i + 7])) / 4.0f; 
-            float o_right_depth = (cal_distance(C_object_plum_points[i + 1]) + cal_distance(C_object_plum_points[i + 5]) + cal_distance(C_object_plum_points[i + 6]) + cal_distance(C_object_plum_points[i + 2])) / 4.0f; 
-            float o_up_depth = (cal_distance(C_object_plum_points[i + 4]) + cal_distance(C_object_plum_points[i + 5]) + cal_distance(C_object_plum_points[i + 1]) + cal_distance(C_object_plum_points[i])) / 4.0f;
-            
-            o_front_2d.push_back({idx,object_plum_2d_points[i],object_plum_2d_points[i + 1], object_plum_2d_points[i + 2], object_plum_2d_points[i + 3],o_front_depth});
-            o_up_2d.push_back({idx,object_plum_2d_points[i + 4],object_plum_2d_points[i + 5], object_plum_2d_points[i + 1], object_plum_2d_points[i],o_up_depth});
-            if (o_left_depth > o_right_depth) {
-                o_side_2d.push_back({idx,object_plum_2d_points[i + 1],object_plum_2d_points[i + 5], object_plum_2d_points[i + 6], object_plum_2d_points[i + 2],o_right_depth});
-            }else{o_side_2d.push_back({idx,object_plum_2d_points[i + 4],object_plum_2d_points[i], object_plum_2d_points[i + 3], object_plum_2d_points[i + 7],o_left_depth});}
-
-            float p_front_depth = (cal_distance(C_object_plum_points[96 + i]) + cal_distance(C_object_plum_points[96 + i + 1]) + cal_distance(C_object_plum_points[96 + i + 2])+ cal_distance(C_object_plum_points[96 + i + 3])) / 4.0f;
-            float p_left_depth = (cal_distance(C_object_plum_points[96 + i + 4]) + cal_distance(C_object_plum_points[96 + i]) + cal_distance(C_object_plum_points[96 + i + 3]) + cal_distance(C_object_plum_points[96 + i + 7])) / 4.0f; 
-            float p_right_depth = (cal_distance(C_object_plum_points[96 + i + 1]) + cal_distance(C_object_plum_points[96 + i + 5]) + cal_distance(C_object_plum_points[96 + i + 6]) + cal_distance(C_object_plum_points[96 + i + 2])) / 4.0f; 
-            float p_up_depth = (cal_distance(C_object_plum_points[96 + i + 4]) + cal_distance(C_object_plum_points[96 + i + 5]) + cal_distance(C_object_plum_points[96 + i + 1]) + cal_distance(C_object_plum_points[96 + i])) / 4.0f;
-            
-            p_front_2d.push_back({idx,object_plum_2d_points[96 + i],object_plum_2d_points[96 + i + 1], object_plum_2d_points[96 + i + 2], object_plum_2d_points[96 + i + 3],p_front_depth});
-            p_up_2d.push_back({idx,object_plum_2d_points[96 + i + 4],object_plum_2d_points[96 + i + 5], object_plum_2d_points[96 + i + 1], object_plum_2d_points[96 + i],p_up_depth});
-            if (o_left_depth > o_right_depth) {
-                p_side_2d.push_back({idx,object_plum_2d_points[96 + i + 1],object_plum_2d_points[96 + i + 5], object_plum_2d_points[96 + i + 6], object_plum_2d_points[96 + i + 2],p_right_depth});
-            }else{p_side_2d.push_back({idx,object_plum_2d_points[96 + i + 4],object_plum_2d_points[96 + i], object_plum_2d_points[96 + i + 3], object_plum_2d_points[96 + i + 7],p_left_depth});}  
-        } 
-
+        // 1 检查图像有效性
+        if (image.empty() || image.cols <= 0 || image.rows <= 0) {
+            ROS_WARN("Invalid image size: cols=%d, rows=%d", image.cols, image.rows);
+            return;
+        }
         // 2. 填充 zbuffer, object_zbuffer 矩阵
         // 2.1 初始化深度缓冲（初始值为最大浮点数，表示无深度）
         cv::Mat zbuffer = cv::Mat::ones(image.rows, image.cols, CV_32F) * FLT_MAX;
         cv::Mat object_zbuffer = cv::Mat::ones(image.rows, image.cols, CV_32F) * FLT_MAX;
 
         // 2.2 提取2d点坐标
-        if (!(o_front_2d.size() == 12 && o_side_2d.size() == 12 && o_up_2d.size() == 12 && p_front_2d.size() == 12 && p_side_2d.size() == 12 && p_up_2d.size() == 12)){
+        std::vector<surface_2d_point> object_front_2d = object_2d_points_lists[0];
+        std::vector<surface_2d_point> object_side_2d = object_2d_points_lists[1];
+        std::vector<surface_2d_point> object_up_2d = object_2d_points_lists[2];
+        std::vector<surface_2d_point> plum_front_2d = plum_2d_points_lists[0];
+        std::vector<surface_2d_point> plum_side_2d = plum_2d_points_lists[1];
+        std::vector<surface_2d_point> plum_up_2d = plum_2d_points_lists[2];
+        if (!(object_front_2d.size() == 12 && object_side_2d.size() == 12 && object_up_2d.size() == 12 && plum_front_2d.size() == 12 && plum_side_2d.size() == 12 && plum_up_2d.size() == 12)){
             ROS_WARN("in surface_2d_point, the size is not 12!!!");
             return;
         }
 
         // 2.3 先填充台阶的深度
-        for (size_t i = 0; i < p_side_2d.size(); i++) {
-            auto& p_front = p_front_2d[i];
-            auto& p_side = p_side_2d[i];
-            auto& p_up = p_up_2d[i];
+        for (size_t i = 0; i < plum_side_2d.size(); i++) {
+            auto& p_front = plum_front_2d[i];
+            auto& p_side = plum_side_2d[i];
+            auto& p_up = plum_up_2d[i];
 
             // 2.3.1 收集台阶的所有2D点坐标，判断整个台阶的所有点是否都在图像外
             std::vector<cv::Point2f> all_points = {
@@ -138,16 +164,16 @@ namespace Ten
         }
 
         // 2.4 再填充方块的深度, 3 在循环中填充各个方块的roi图像信息
-        for (size_t i = 0; i < o_side_2d.size(); i++) {
-            if (i >= o_front_2d.size() || i >= o_up_2d.size()) break;
+        for (size_t i = 0; i < object_side_2d.size(); i++) {
+            if (i >= object_front_2d.size() || i >= object_up_2d.size()) break;
 
             // // 2.4.1 同时满足 exist_boxes[i] != 0 && interested_boxes[i] == 1 才更新
             // if (!(exist_boxes[i] != 0 && interested_boxes[i] == 1))continue;
             // if (box_lists[i].zbuffer_flag == -1) continue;
             
-            auto& o_front = o_front_2d[i];
-            auto& o_side = o_side_2d[i];
-            auto& o_up = o_up_2d[i];
+            auto& o_front = object_front_2d[i];
+            auto& o_side = object_side_2d[i];
+            auto& o_up = object_up_2d[i];
 
             // 2.4.2 收集方块所有2D点坐标， 并判断方块的所有点是否都在图像外
             std::vector<cv::Point2f> all_points = {
@@ -237,8 +263,11 @@ namespace Ten
                     max_points_count = points.size(); 
                 }
             }       
+            // 更新 points 和 points_count////////////////////////////////////////////////////////////////////////////////maple
+            //if (max_points_count <= box_lists[i].points_count)continue;
+                box_lists[i].points_count = max_points_count;
 
-            ///---------------------------------------------------------不更新 roi_image 的条件 -------------------------------
+            ///---------------------------------------------------------改-------------------------------
             if (valid_max_points.empty()) {
                 ROS_WARN("box idx=%d valid_max_points is empty, skip crop ROI", box_lists[i].idx);
                 // box_lists[i].zbuffer_flag = -1; // 标记异常
@@ -262,7 +291,8 @@ namespace Ten
                 ROS_WARN("box_lists[i].zbuffer_flag == -1");
                 continue;
             } 
-            //--------------------------------------------------------------------------------------------------------------
+            //-------------------------------------------------------------------------------------------
+
 
             // 3.3 准备有效区域的掩码, 并更新有效区域的外接x_min,y_min,x_max,y_max
             int x_min = INT_MAX, x_max = INT_MIN;   
@@ -316,9 +346,12 @@ namespace Ten
             }
 
             // 3.8 准备填充 box_lists 信息
+            //box_lists[i].roi_image = square_roi;
             square_roi.copyTo(box_lists[i].roi_image);
             box_lists[i].zbuffer_flag = 1;
+            
         }    
+    
     };
 
     void Ten_zbuffer_simplify::set_debug_roi_image(
@@ -353,8 +386,9 @@ namespace Ten
                     cv::resize(src_img, resized_img, cv::Size(SINGLE_SIZE, SINGLE_SIZE), 0, 0, cv::INTER_LINEAR);
                     // 3.5 替换初始化的黑图
                     roi_images[vec_idx] = resized_img.clone();
-                    cv::putText(roi_images[vec_idx], std::to_string(box_lists[vec_idx].cls), cv::Point(roi_images[vec_idx].cols - 80 , roi_images[vec_idx].rows - 80), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
-                    cv::putText(roi_images[vec_idx], std::to_string(box_lists[vec_idx].confidence), cv::Point(roi_images[vec_idx].cols - 80 , roi_images[vec_idx].rows - 40), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+                    cv::putText(roi_images[vec_idx], std::to_string(box_lists[vec_idx].cls), cv::Point(roi_images[vec_idx].cols - 100 , roi_images[vec_idx].rows - 120), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+                    cv::putText(roi_images[vec_idx], std::to_string(box_lists[vec_idx].confidence), cv::Point(roi_images[vec_idx].cols - 100 , roi_images[vec_idx].rows - 80), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+                    cv::putText(roi_images[vec_idx], std::to_string(box_lists[vec_idx].exist_flag), cv::Point(roi_images[vec_idx].cols - 100 , roi_images[vec_idx].rows - 40), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
                     break;
                 }
             }
@@ -378,36 +412,48 @@ namespace Ten
         }
     };
 
-    void Ten_zbuffer_simplify::set_HSV_exist_boxes_(std::vector<box>& box_lists,std::vector<score>& score_lists){
-        set_hsv_mode(box_lists,score_lists);
+    void Ten_zbuffer_simplify::set_HSV_exist_boxes_(std::vector<box>& box_lists){
+        std::unordered_map<int, std::tuple<int, int, int>> idx_hsv_map_ = set_idx_hsv_map_(box_lists);
         std::vector<float> score = {-1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f}; 
         std::cout << "standard_hsv: " << standard_hsv_[0] << "  "  << standard_hsv_[1] << "  "  << standard_hsv_[2] << std::endl;
-        // 1.计算得分
-        for(size_t i = 0; i < 12; i++) {
-            if (box_lists[i].zbuffer_flag != 1) 
+        // 1.计算得分并填充 下标-得分 列表 idx_score_lists
+        std::vector<std::pair<int,float>> idx_score_lists;
+        for(const auto& [idx, hsv_tuple] : idx_hsv_map_) {
+            if (idx < 1 || idx > score.size()) 
             {
-                score_lists[i].hsv_score = score[i];
+                //idx_score_lists.emplace_back(idx, score[idx - 1]);
+                ROS_WARN("if (idx < 1 || idx > score.size()) ");
                 continue;
             }
-            int h = std::get<0>(score_lists[i].hsv_mode);
-            int s = std::get<1>(score_lists[i].hsv_mode);
-            int v = std::get<2>(score_lists[i].hsv_mode);
-
+            
+            if (box_lists[idx - 1].zbuffer_flag != 1) 
+            {
+                idx_score_lists.emplace_back(idx, score[idx - 1]);
+                continue;
+            }
+            int h = std::get<0>(hsv_tuple);
+            int s = std::get<1>(hsv_tuple);
+            int v = std::get<2>(hsv_tuple);
+            std::cout << "idx: " << idx <<", hsv_tuple: "<< h << " " << s << " " << v << "  " << std::endl;
             // 得分公式
-            score[i] = std::max(0.0f,60.0f - abs(h - standard_hsv_[0]))
-                     + std::max(0.0f,10.0f - 0.2f * abs(s - standard_hsv_[1]))
-                     + std::max(0.0f,30.0f - 0.5f * abs(v - standard_hsv_[2]));
+            score[idx - 1] = std::max(0.0f,60.0f - abs(h - standard_hsv_[0]) )
+                        + std::max(0.0f,10.0f - 0.2f * abs(s - standard_hsv_[1]))
+                        + std::max(0.0f,30.0f - 0.5f * abs(v - standard_hsv_[2]));
 
-            score_lists[i].hsv_score = score[i];
+            idx_score_lists.emplace_back(idx, score[idx - 1]);
         }
         
         // 2. 按照得分进行排序
-        std::sort(score_lists.begin(),score_lists.end(),
-        [](const Ten::score&a, Ten::score&b){
-            return a.hsv_score > b.hsv_score;
-        });
+        std::sort(idx_score_lists.begin(), idx_score_lists.end(),
+            [](const std::pair<int, float>& a, const std::pair<int, float>& b) {
+                return a.second > b.second;
+            });
 
         // 3. 填充 exist_boxes
+        for(size_t i = 0;i < idx_score_lists.size(); ++i){
+            std::cout << "idx: " << idx_score_lists[i].first << ": " << idx_score_lists[i].second << std::endl;
+        }
+
         size_t total = 0;
         size_t noempty = 0;
         for(size_t i = 0; i < box_lists.size(); i++)
@@ -423,57 +469,95 @@ namespace Ten
                     noempty++;
                 }
             }
+
         }
+
+        // for(size_t i = 0;i < idx_score_lists.size(); ++i){
+        //     if (i < 8){
+        //         box_lists[idx_score_lists[i].first - 1].exist_flag = 1; 
+        //     }
+        //     else
+        //     {
+        //         box_lists[idx_score_lists[i].first - 1].exist_flag = 0;
+        //     }
+        // }
         std::cout << "total" << total << std::endl;
         std::cout << "noempty" << noempty << std::endl;
-
+        std::cout << "box_lists size" << box_lists.size() << std::endl;
+        std::cout << "idx_score_lists size " << idx_score_lists.size() << std::endl;
         for(size_t i = 0;i < total; ++i){
             if (i < 8 - noempty){
-                box_lists[i].exist_flag = 1; 
+                std::cout<<"idx_score_lists[i].first - 1 "<<idx_score_lists[i].first - 1<<std::endl;
+                box_lists[idx_score_lists[i].first - 1].exist_flag = 1; 
             }
             else
             {
-                box_lists[i].exist_flag = 0;
+                std::cout<<"idx_score_lists[i].first - 1 "<<idx_score_lists[i].first - 1<<std::endl;
+                box_lists[idx_score_lists[i].first - 1].exist_flag = 0;
             }
         }
+
+
+        // for(size_t i = 0;i <  8 - std::count(managed_boxes.begin(),managed_boxes.end(),0); ++i){
+        //     box_lists[idx_score_lists[i].first - 1].exist_flag = 1;
+        // }
     }
 
     
-    void Ten_zbuffer_simplify::set_standard_hsv_(std::vector<box>& box_lists,std::vector<score>& score_lists){
-        set_hsv_mode(box_lists,score_lists);
+    void Ten_zbuffer_simplify::set_standard_hsv_(std::vector<box>box_lists){
+        std::unordered_map<int, std::tuple<int, int, int>> idx_hsv_map = set_idx_hsv_map_(box_lists);
         // 1. 填入结果向量
         std::vector<int> idx_h_result, idx_s_result, idx_v_result;
-        for (size_t i = 0; i < 12; i++) {
-            idx_h_result.push_back(std::get<0>(score_lists[i].hsv_mode));
-            idx_s_result.push_back(std::get<1>(score_lists[i].hsv_mode));
-            idx_v_result.push_back(std::get<2>(score_lists[i].hsv_mode));
+        for (const auto& [idx, hsv_tuple] : idx_hsv_map) {
+            idx_h_result.push_back(std::get<0>(hsv_tuple));
+            idx_s_result.push_back(std::get<1>(hsv_tuple));
+            idx_v_result.push_back(std::get<2>(hsv_tuple));
         }
         // 2. 计算标准hsv值（计算方法： 最小总差值）
         standard_hsv_ = {cal_single_standard_hsv(idx_h_result),cal_single_standard_hsv(idx_s_result), cal_single_standard_hsv(idx_v_result)};
     }
 
     cv::Mat Ten_zbuffer_simplify::update_debug_image(
-        cv::Mat image,
-        const std::vector<cv::Point2f>& object_plum_2d_points_
+        cv::Mat image_in,
+        const std::vector<std::vector<surface_2d_point>>& object_2d_points_lists
     ){
+        
         // 1. 检查输入有效性
-        if (image.empty()) {
+        if (image_in.empty()) {
             ROS_WARN("Image is empty, skip draw");
             return cv::Mat();
         }
-        cv::Mat img;
-        image.copyTo(img);
 
-        for (size_t i = 0; i < object_plum_2d_points_.size(); i++) {
+        cv::Mat image;
+        image_in.copyTo(image);
+
+        std::vector<surface_2d_point> object_front_2d = object_2d_points_lists[0];
+        std::vector<surface_2d_point> object_side_2d = object_2d_points_lists[1];
+        std::vector<surface_2d_point> object_up_2d = object_2d_points_lists[2];
+
+        for (size_t i = 0; i < object_side_2d.size(); i++) {
+            if (i >= object_front_2d.size() || i >= object_up_2d.size()) break;
             
-            if (i < 96 && i % 8 == 0){
-            cv::line(img, object_plum_2d_points_[i], object_plum_2d_points_[i + 1], cv::Scalar(0,255,0), 2, cv::LINE_AA);
-            cv::line(img, object_plum_2d_points_[i + 1], object_plum_2d_points_[i + 2], cv::Scalar(0,255,0), 2, cv::LINE_AA);
-            cv::line(img, object_plum_2d_points_[i + 2], object_plum_2d_points_[i + 3], cv::Scalar(0,255,0), 2, cv::LINE_AA);
-            cv::line(img, object_plum_2d_points_[i + 3], object_plum_2d_points_[i], cv::Scalar(0,255,0), 2, cv::LINE_AA);
-        }   
+            auto& o_front = object_front_2d[i];
+            auto& o_side = object_side_2d[i];
+            auto& o_up = object_up_2d[i];
+
+            cv::line(image, o_front.left_up, o_front.right_up, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+            cv::line(image, o_front.right_up, o_front.right_down, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+            cv::line(image, o_front.right_down, o_front.left_down, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+            cv::line(image, o_front.left_down, o_front.left_up, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+
+            cv::line(image, o_side.left_up, o_side.right_up, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+            cv::line(image, o_side.right_up, o_side.right_down, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+            cv::line(image, o_side.right_down, o_side.left_down, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+            cv::line(image, o_side.left_down, o_side.left_up, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+
+            cv::line(image, o_up.left_up, o_up.right_up, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+            cv::line(image, o_up.right_up, o_up.right_down, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+            cv::line(image, o_up.right_down, o_up.left_down, cv::Scalar(0,255,0), 2, cv::LINE_AA);
+            cv::line(image, o_up.left_down, o_up.left_up, cv::Scalar(0,255,0), 2, cv::LINE_AA);
     }
-    return img;
+    return image;
 
     }
 
@@ -482,4 +566,11 @@ namespace Ten
 
 }
 
+
+
+
+
+
 #endif 
+
+

@@ -280,7 +280,7 @@ T* data_;
 };
 
 extern Ten_one_write_multiple_read<nav_msgs::Odometry> _TF_GET_;
-
+extern Ten_one_write_multiple_read<nav_msgs::Odometry> _TF_CAMERA_GET_;
 // extern Ten_one_write_multiple_read<livox_ros_driver::CustomMsg> _LIVOX_GET_;
 
 // extern Ten_one_write_multiple_read<sensor_msgs::Imu> _IMU_GET_;

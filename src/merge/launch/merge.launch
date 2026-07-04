@@ -3,8 +3,9 @@
 
 	<!--/home/maple/study2/merge_ws3/src/merge/src/point_lio/config/mid360.yaml-->
 	<arg name="rviz" default="true" />
+	<arg name="node_exit_timeout" default="10" />
 
-	<node pkg="merge" type="merge_node" name="merge_node" output="screen">
+	<node pkg="merge" type="merge_node" name="merge_node" output="screen" required="true" respawn="false">
 	<rosparam command="load" file="$(find merge)/src/point_lio/config/mid360.yaml" />
 	<param name="use_imu_as_input" type="bool" value="1"/> <!--change to 1 to use IMU as input of Point-LIO-->
 	<param name="prop_at_freq_of_imu" type="bool" value="1"/>
@@ -28,11 +29,11 @@
 	</node>
 	-->
 	<group if="$(arg rviz)">
-	<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find merge)/rviz_cfg/loam_livox.rviz" />
+	<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find merge)/rviz_cfg/loam_livox.rviz" output="screen"/>
 	</group>
 	
 	<!--<include file="$(find yolopkg)/launch/yolo.launch" />-->
-
+	<param name="/roslaunch/child_terminate_timeout" value="$(arg node_exit_timeout)" type="int"/>
 	launch-prefix="gdb -ex run --args"
 
 </launch>
