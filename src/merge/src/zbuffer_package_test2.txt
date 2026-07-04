@@ -1,0 +1,135 @@
+#include <ros/ros.h>
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <nav_msgs/Odometry.h>
+#include <opencv2/opencv.hpp>
+#include <mutex>
+#include <atomic>
+
+// 引入Ten_zbuffer类（根据实际头文件路径调整）
+#include "zbuffer_package.cpp"  
+
+// 缓存最新的图像和里程计消息（线程安全）
+struct MsgCache {
+    std::mutex mtx;                  // 互斥锁保护缓存
+    cv::Mat latest_image;            // 最新图像缓存
+    nav_msgs::Odometry latest_odom;  // 最新里程计缓存
+    std::atomic<bool> has_image;     // 是否有有效图像
+    std::atomic<bool> has_odom;      // 是否有有效里程计
+
+    // 初始化
+    MsgCache() : has_image(false), has_odom(false) {}
+} msg_cache;
+
+// 图像回调：仅更新最新图像缓存（非阻塞）
+void imageCallback(const sensor_msgs::ImageConstPtr& msg) {
+    try {
+        // 转换为可修改的Mat拷贝（避免const限制）
+        cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+        
+        // 加锁更新缓存
+        std::lock_guard<std::mutex> lock(msg_cache.mtx);
+        msg_cache.latest_image = cv_ptr->image.clone();
+        msg_cache.has_image = true;
+    } catch (cv_bridge::Exception& e) {
+        ROS_ERROR_THROTTLE(1.0, "图像转换失败: %s", e.what());
+        msg_cache.has_image = false;
+    }
+}
+
+// 里程计回调：仅更新最新里程计缓存（非阻塞）
+void odomCallback(const nav_msgs::Odometry::ConstPtr& msg) {
+    std::lock_guard<std::mutex> lock(msg_cache.mtx);
+    msg_cache.latest_odom = *msg;  // 拷贝最新里程计
+    msg_cache.has_odom = true;
+}
+
+int main(int argc, char **argv) {
+    // 1. 初始化ROS节点
+    ros::init(argc, argv, "zbuffer_package_test2_node");
+    ros::NodeHandle nh;
+    image_transport::ImageTransport it(nh);
+
+    // 2. 创建Ten_zbuffer核心对象
+    Ten::Ten_zbuffer zbuffer_handler;
+
+    // 3. 创建图像发布器（发布处理后的带zbuffer的图像）
+    image_transport::Publisher zbuffer_pub = it.advertise("pub_image_topic", 2);
+    image_transport::Publisher debug_roi_pub = it.advertise("pub_debug_roi",2);
+
+    // 4. 订阅图像和里程计话题（仅更新缓存，不处理逻辑）
+    std::string image_topic = "/kinect2/hd/image_color_rect";  // 原始图像话题
+    std::string odom_topic = "/robot_pose";               // 里程计话题
+    image_transport::Subscriber img_sub = it.subscribe(image_topic, 10, imageCallback);
+    ros::Subscriber odom_sub = nh.subscribe(odom_topic, 10, odomCallback);
+
+    // 5. 非阻塞主循环（控制处理频率）
+    ros::Rate loop_rate(30);  // 处理频率（10Hz，可按需调整）
+    while (ros::ok()) {
+        // -------------------------- 步骤1：非阻塞检查缓存 --------------------------
+        bool process_flag = false;
+        cv::Mat current_image;
+        nav_msgs::Odometry current_odom;
+
+        // 加锁读取缓存
+        {
+            std::lock_guard<std::mutex> lock(msg_cache.mtx);
+            if (msg_cache.has_image && msg_cache.has_odom) {
+                current_image = msg_cache.latest_image.clone();  // 拷贝图像（避免被回调覆盖）
+                current_odom = msg_cache.latest_odom;            // 拷贝里程计
+                process_flag = true;
+
+                // 清空缓存标记（避免重复处理同一帧）
+                msg_cache.has_image = false;
+                msg_cache.has_odom = false;
+            }
+        }
+
+        // -------------------------- 步骤2：有有效数据则处理 --------------------------
+        if (process_flag && !current_image.empty()) {
+            // 调用manage_odom处理图像（修改拷贝后的图像，不影响缓存）
+
+            // if (zbuffer_handler.getBestRoiImage_size(boost::make_shared<nav_msgs::Odometry>(current_odom),current_image) >= 7){
+            //    std::unordered_map<int, cv::Mat>best_roi_image_ =  zbuffer_handler.getBestRoiImage();
+            // }
+
+            auto start = std::chrono::high_resolution_clock::now();
+             std::unordered_map<int, cv::Mat>best_roi_image_ = zbuffer_handler.manage_odom_zbuffer_roi(
+                                    current_odom, 
+                                    current_image);
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds> (end - start);
+            ROS_INFO("manage_odom_zbuffer_roi time:%ld ms", duration.count());
+
+            // 发布处理后的图像
+            sensor_msgs::ImagePtr pub_msg = cv_bridge::CvImage(
+                std_msgs::Header(), "bgr8", current_image
+            ).toImageMsg();
+            zbuffer_pub.publish(pub_msg);
+
+            sensor_msgs::ImagePtr pub_debug_msg = cv_bridge::CvImage(
+                std_msgs::Header(), "bgr8", zbuffer_handler.getdebugRoiImage()
+            ).toImageMsg();
+            debug_roi_pub.publish(pub_debug_msg);
+        } else {
+            // 无有效数据时仅打印一次警告（避免刷屏）
+            static bool warn_flag = true;
+            if (warn_flag) {
+                // if (!msg_cache.has_image && !msg_cache.has_odom) {
+                //     ROS_WARN_THROTTLE(2.0, "no image or tf...");
+                // } else if (!msg_cache.has_image) {
+                //     ROS_WARN_THROTTLE(2.0, "no image...");
+                // } else if (!msg_cache.has_odom) {
+                //     ROS_WARN_THROTTLE(2.0, "no tf..");
+                // }
+            }
+        }
+
+        // -------------------------- 步骤3：非阻塞处理ROS消息 + 控制频率 --------------------------
+        ros::spinOnce();  // 处理回调（非阻塞，仅处理当前队列中的消息）
+        loop_rate.sleep();// 控制循环频率，不阻塞
+    }
+
+    return 0;
+}
