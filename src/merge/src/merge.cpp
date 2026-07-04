@@ -1,6 +1,5 @@
 #include "./debug/debug_control.cpp"
 #include "./debug/debug_vision.cpp"
-#include "./debug/vision.cpp"
 #include "./superstratum/controlR2.h"
 #include "./superstratum/super2.h"
 #include "./point_lio/src/laserMapping2.h"
@@ -122,54 +121,12 @@ void sigintHandler(int sig)
 #else
     int main(int argc, char **argv)
     {
-        // if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
-        //     ros::console::notifyLoggerLevelsChanged();
-        // }
-
-        //ros::init(argc, argv, "merge_node");
-        //关键：NoSigintHandler → 禁用ROS默认的SIGINT处理，改用自定义逻辑
-        
-        ros::init(argc, argv, "merge_node", ros::init_options::NoSigintHandler);
-
-
-
-        // ========== 第二步：创建NodeHandle（必须！否则ros::ok()无效） ==========
-        ros::NodeHandle nh;
-        //3. 注册自定义SIGINT信号处理函数（替换默认处理）
-        signal(SIGINT, sigintHandler);
-
         std::cout << "🐅: " << "R0" << std::endl;
-        Ten::parameter::loadyaml ly;
+        Ten::parameter::loadyaml::loadyamlall();
 
-        std::string lidar_path = std::string(ROOT_DIR) + std::string("src/livox_ros_driver2/config/MID360_config.json");
-        Ten::Ten_lidar::GetInstance(lidar_path);
-        Ten::ThreadPool pool(4);
-        //pool.enqueue(Loopcallback);
-        //pool.enqueue(test_lidar_point_lio_imu2);
-        // //pool.enqueue(test_lidar_ekf_of_point_lio);
-        // //pool.enqueue(test_lidar_fast_lio);
-        pool.enqueue(Ten::script_control);
-        // pool.enqueue(test_mapping);
-
-        // pool.enqueue(Ten::superstratum::controlR2::serial_send_lidarR2_ekf_imu);
-        // pool.enqueue(Ten::superstratum::controlR2::serial_receiver);
-        // laserMapping();
-
-        vision_test_super2();
-        //vision_test_relocation2();
-        //serial_send_test1();
-        //publishimg2();
-        //vision_test_relocation2();
-        //test_vision_d435();
-        // ros::Rate sl(1);
-        // while(Ten::_TREADPOOL_FLAG_.read_flag())
-        // {
-        //     sl.sleep();
-        // }
-        //test_path();
-
-        //test_vision_cam();
-
+        // test_camera_detR1 不使用 ROS，放在 ros::init 之前避免 "Couldn't resolve requests"
+        test_camera_detR1();
+        
         return 0;
     }
 #endif

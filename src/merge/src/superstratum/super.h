@@ -21,6 +21,8 @@
 #include "./../method_math.h"
 #include "./../yolo/yolo_v11_cls.h"
 #include "../parameter/parameter.h"
+#include "./../nine/detector.h"
+
 
 namespace Ten
 {

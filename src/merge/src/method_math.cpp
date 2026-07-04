@@ -45,7 +45,7 @@ namespace Ten
         @param msg: nav_msgs::Odometry
         @return xyzrpy
     */
-    XYZRPY Nav_Odometrytoxyzrpy(const nav_msgs::Odometry msg)
+    XYZRPY Nav_Odometrytoxyzrpy(nav_msgs::Odometry msg)
     {
         XYZRPY change;
 

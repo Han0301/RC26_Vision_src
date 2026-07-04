@@ -114,7 +114,7 @@ public:
 
         typename PointCloudT::Ptr local_cloud;
         sensor_msgs::PointCloud2 map;
-        if(!Ten::_Map_GET_.pop(map))
+        if(!Ten::_Map_GET2_.pop(map))
         {
             return Ten::XYZRPY();
         }
@@ -197,7 +197,7 @@ public:
             return Ten::XYZRPY();
         }
         //local_cloud_ = local_cloud;
-        local_cloud_ = global_cloud2_;
+        //local_cloud_ = global_cloud2_;
         
         //icp精配准
         // typename PointCloudT::Ptr local_cloud_raw(new PointCloudT);
@@ -206,16 +206,16 @@ public:
         // Eigen::Matrix4d transform_matrix_mix = transform_matrix_icp * transform_matrix_raw;
         //求逆矩阵
         //Eigen::Matrix4d inverse_transform = transform_matrix_mix.inverse();
-        Eigen::Matrix4d transform_matrix_raw_3 = process_nano_gicp(local_cloud2_, local_cloud, _voxeldownsample_threshold_for_icp_);
+        //Eigen::Matrix4d transform_matrix_raw_3 = process_nano_gicp(local_cloud2_, local_cloud, _voxeldownsample_threshold_for_icp_);
+        Eigen::Matrix4d ftransform_matrix_raw = process_teaser(local_cloud2_, local_cloud, _voxeldownsample_threshold_for_teaser_);
+        typename PointCloudT::Ptr flocal_cloud_raw(new PointCloudT);
+        pcl::transformPointCloud(*local_cloud, *flocal_cloud_raw, ftransform_matrix_raw);
+        Eigen::Matrix4d ftransform_matrix_raw_2 = process_nano_gicp(local_cloud2_, flocal_cloud_raw, _voxeldownsample_threshold_for_icp_);
+        Eigen::Matrix4d transform_matrix_raw_3 = ftransform_matrix_raw_2 * ftransform_matrix_raw; 
 
-        Eigen::Matrix4d transform_matrix_raw = process_teaser(global_cloud_, local_cloud_, _voxeldownsample_threshold_for_teaser_);
+        Eigen::Matrix4d transform_matrix_raw = process_teaser(global_cloud_, global_cloud2_, _voxeldownsample_threshold_for_teaser_);
         typename PointCloudT::Ptr local_cloud_raw(new PointCloudT);
-        pcl::transformPointCloud(*local_cloud, *local_cloud_raw, transform_matrix_raw);
-        // Eigen::Matrix4d transform_matrix_raw_2 = process_teaser(global_cloud_, local_cloud_raw, 0.3);
-        // Eigen::Matrix4d transform_matrix_mix = transform_matrix_raw_2 * transform_matrix_raw;
-
-
-        //Eigen::Matrix4d transform_matrix_raw_2 = process_icp(global_cloud_, local_cloud_raw, 0.5);
+        pcl::transformPointCloud(*global_cloud2_, *local_cloud_raw, transform_matrix_raw);
         Eigen::Matrix4d transform_matrix_raw_2 = process_nano_gicp(global_cloud_, local_cloud_raw, _voxeldownsample_threshold_for_icp_);
         
         
@@ -345,7 +345,7 @@ private:
         typename pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
         ne.setInputCloud(cloud);
         ne.setSearchMethod(tree);
-        ne.setKSearch(100); // 近邻数，可根据点云密度调整
+        ne.setKSearch(50); // 近邻数，可根据点云密度调整
         //ne.setRadiusSearch(5);
         ne.compute(*normals);
 
@@ -354,7 +354,7 @@ private:
         fpfh.setInputCloud(cloud);
         fpfh.setInputNormals(normals);
         fpfh.setSearchMethod(tree);
-        fpfh.setKSearch(200); // 特征计算近邻数
+        fpfh.setKSearch(100); // 特征计算近邻数
         fpfh.compute(*fpfh_features);
         std::cout << "FPFH特征提取完成，特征维度: " << fpfh_features->size() << std::endl;
     }
@@ -467,11 +467,11 @@ private:
     
         // 4. 设置参数（保留原有）
         // 4. 设置配准核心参数
-        nano_gicp.setMaximumIterations(300);            // 配准最大迭代次数，防止算法无限循环
+        nano_gicp.setMaximumIterations(1000);            // 配准最大迭代次数，防止算法无限循环
         nano_gicp.setTransformationEpsilon(1e-8);       // 变换矩阵收敛阈值，矩阵变化小于该值则停止迭代
         nano_gicp.setMaxCorrespondenceDistance(_setmaxcorrespondencedistance_nano_gicp_);   // 最大匹配点对距离阈值，超出距离的点对不参与配准
         nano_gicp.setEuclideanFitnessEpsilon(1e-6);     // 欧式拟合误差收敛阈值，适应度变化小于该值则停止迭代
-        nano_gicp.setCorrespondenceRandomness(20);      // 随机采样匹配点数量，用于加速配准计算
+        nano_gicp.setCorrespondenceRandomness(30);      // 随机采样匹配点数量，用于加速配准计算
     
         // 5. 执行配准（保留原有）
         PointCloudT temp_cloud;

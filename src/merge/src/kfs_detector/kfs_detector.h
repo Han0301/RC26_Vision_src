@@ -9,6 +9,7 @@
 #include "./../parameter/parameter.h"
 
 #define AREA_THRESHOLD 25000
+
 namespace Ten
 {
 namespace r1_recognition
@@ -17,7 +18,7 @@ class kfs_detect
 {
 public:
     kfs_detect()
-        :detector(Ten::_kfs_path_,"cpu",0.5,0.5,0)
+        :detector(_input_parameter_[0]==0?std::string(ROOT_DIR)+std::string("model/red/best"):std::string(ROOT_DIR)+std::string("model/blue/best"),"gpu",0.5,0.5,0)
     {}
 
     // // 输入vector表示路径位置，x,y,yaw表示当前位置信息, 输出调用的相机号, 左1， 右2, 返回0表示异常

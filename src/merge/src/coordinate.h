@@ -96,6 +96,17 @@ namespace Ten
         }
 
         /**
+         * @brief 得到世界1到世界2的变换
+         * @param Eigen::Matrix4d: 雷达到车的变换
+         */
+        Eigen::Matrix4d get_world1toworld2()
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            return XYZRPYtotransform_matrix(world2toworld1_).inverse();
+        }
+
+
+        /**
          * @brief 得到雷达到车的变换
          * @param Eigen::Matrix4d: 雷达到车的变换
          */

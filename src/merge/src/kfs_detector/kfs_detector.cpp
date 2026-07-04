@@ -7,12 +7,16 @@
 namespace Ten
 {
 
+
+
+
 void kfs_detector_controller(int id)
 {
     static Ten::Ten_serial& serial = Ten::Ten_serial::GetInstance();
+    static Ten::r1_recognition::kfs_detect global_kfs_detector;
     std::vector<int> idxs = {Ten::_usb_device_num1_, Ten::_usb_device_num2_};
     Ten::Ten_usb_cam_multi& usbcam = Ten::Ten_usb_cam_multi::GetInstance(idxs,640,480,30);
-    Ten::r1_recognition::kfs_detect kfs_detector;
+    
     //是否发送
     int flag_is_run = 0;
     int flag_count_id = 0;
@@ -69,8 +73,8 @@ void kfs_detector_controller(int id)
         flag_frame++;
 
         //检测
-        cv::Rect roi = kfs_detector.set_roi_detect(img);
-        bool is_kfs = kfs_detector.confirm_kfs(roi);
+        cv::Rect roi = global_kfs_detector.set_roi_detect(img);
+        bool is_kfs = global_kfs_detector.confirm_kfs(roi);
         if(!is_kfs)
         {
             if(flag_frame >= 20)
@@ -78,7 +82,7 @@ void kfs_detector_controller(int id)
                 if(flag_count_id == 0)
                 {
                     flag_count_id = 1;
-                    usleep(600 * 1000);
+                    usleep(500 * 1000);
                 }
                 else
                 {

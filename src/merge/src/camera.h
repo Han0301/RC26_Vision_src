@@ -8,6 +8,8 @@
 #include <mutex>
 #include <unistd.h>
 #include "threadpool.h"
+#include "camera_virtual.h"
+
 
 namespace Ten
 {
@@ -21,7 +23,7 @@ struct camera_frame
     
 
 
-class Ten_camera
+class Ten_camera : public camera_virtual
 {
 public:
     //禁用拷贝构造
@@ -76,7 +78,18 @@ public:
 
     ~Ten_camera()
     {
-        pipe.stop();
+        try
+        {
+            pipe.stop();
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << "~Ten_camera pipe.stop() failed: " << e.what() << '\n';
+        }
+        catch (...)
+        {
+            std::cerr << "~Ten_camera pipe.stop() failed: unknown error" << '\n';
+        }
     }
 private:
 
@@ -118,19 +131,29 @@ private:
         catch(const std::exception& e)
         {
             std::cerr << e.what() << '\n';
-            while(!reset_camera_once(_w, _h, _fps) && Ten::_TREADPOOL_FLAG_.read_flag())
+            int retry = 0;
+            const int max_retry = 30;
+            while(!reset_camera_once(_w, _h, _fps) && Ten::_TREADPOOL_FLAG_.read_flag() && retry < max_retry)
             {
                 usleep(100000);
+                retry++;
             }
+            if (retry >= max_retry)
+                std::cerr << "D435 初始化失败，已重试 " << max_retry << " 次，跳过" << std::endl;
         }
         // 9. 捕获未知异常（终极兜底，绝对防止程序崩溃）
         catch (...)
         {
             std::cerr << "相机接受：未知致命异常" << std::endl;
-            while(!reset_camera_once(_w, _h, _fps) && Ten::_TREADPOOL_FLAG_.read_flag())
+            int retry = 0;
+            const int max_retry = 30;
+            while(!reset_camera_once(_w, _h, _fps) && Ten::_TREADPOOL_FLAG_.read_flag() && retry < max_retry)
             {
                 usleep(100000);
+                retry++;
             }
+            if (retry >= max_retry)
+                std::cerr << "D435 初始化失败，已重试 " << max_retry << " 次，跳过" << std::endl;
         }
     }
 

@@ -12,11 +12,12 @@
 #include <memory>
 #include <algorithm>
 #include "threadpool.h"
+#include "camera_virtual.h"
 
 namespace Ten
 {
 
-class Ten_usb_cam_multi
+class Ten_usb_cam_multi : public camera_virtual
 {
 public:
     // 禁用拷贝构造
@@ -39,6 +40,26 @@ public:
      * @return 帧图片（无效返回空Mat）
      */
     cv::Mat camera_read(int dev_idx);
+
+    /**
+     * @brief 读取指定摄像头画面
+     * @param dev_idx 设备号
+     * @return 帧图片（无效返回空Mat）
+     */
+    cv::Mat camera_read()
+    {
+        return camera_read(idx_);
+    }
+
+    /**
+     * @brief 设置idx
+     * @param idx：设备号
+     */
+    void set_idx(int idx)
+    {
+        std::lock_guard<std::mutex> lock(read_mtx_);
+        idx_ = idx;
+    }
 
     /**
      * @brief 重置指定摄像头
@@ -68,6 +89,7 @@ private:
     size_t w_;
     size_t h_;
     size_t fps_;
+    int idx_ = 0;
 };
 
 }

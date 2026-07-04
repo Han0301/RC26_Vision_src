@@ -1,0 +1,8 @@
+{
+  "RedOrBlue": {"name": "红蓝半场", "range": [0, 1], "map":{ "0": "红", "1":"蓝"}, "default": 0}, 
+  "TookKFSAmount": {"name":"已取方块数","range": [0, 4]},
+  "WeaponAmount": {"name":"已夹武器头数量","range": [0, 1], "default": 0},
+  "IfAssemble": {"name": "是否对接","range": [0, 1], "map": { "0": "False", "1": "True" }, "default": 1},
+  "TakeWhichWeapon": {"name": "夹哪个武器头", "range": [1,6]},
+  "StartPlace": {"name":"启动位置", "range": [0,1], "map": { "0": "九宫格", "1":"启动区"}, "default": 1}
+}

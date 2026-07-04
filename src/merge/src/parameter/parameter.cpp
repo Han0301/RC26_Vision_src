@@ -5,6 +5,10 @@
 
 namespace Ten
 {
+    namespace parameter
+    {
+        std::mutex parameter_mtx_;
+    }
 
     namespace superstratum
     {
@@ -36,13 +40,14 @@ namespace Ten
         double _r1_xyzrpy_error_rpy_roll_ = 0;
         double _r1_xyzrpy_error_rpy_pitch_ = 0;
         double _r1_xyzrpy_error_rpy_yaw_ = 0;
+
         //r1雷达初始误差
-        double _r1_xyzrpy_init_error_xyz_x_ = 0;
-        double _r1_xyzrpy_init_error_xyz_y_ = 0;
-        double _r1_xyzrpy_init_error_xyz_z_ = 0;
-        double _r1_xyzrpy_init_error_rpy_roll_ = 0;
-        double _r1_xyzrpy_init_error_rpy_pitch_ = 0;
-        double _r1_xyzrpy_init_error_rpy_yaw_ = 0;
+        std::atomic<double> _r1_xyzrpy_init_error_xyz_x_;
+        std::atomic<double> _r1_xyzrpy_init_error_xyz_y_;
+        std::atomic<double> _r1_xyzrpy_init_error_xyz_z_;
+        std::atomic<double> _r1_xyzrpy_init_error_rpy_roll_;
+        std::atomic<double> _r1_xyzrpy_init_error_rpy_pitch_;
+        std::atomic<double> _r1_xyzrpy_init_error_rpy_yaw_;
 
         // #define _r2_xyzrpy_car_xyz_x_ 0
         // #define _r2_xyzrpy_car_xyz_y_ 0.28
@@ -65,6 +70,7 @@ namespace Ten
         double _r2_xyzrpy_car_rpy_roll_ = 0;
         double _r2_xyzrpy_car_rpy_pitch_ = 0;
         double _r2_xyzrpy_car_rpy_yaw_ = 0;
+
         //r2建图误差
         double _r2_xyzrpy_error_xyz_x_ = 0;
         double _r2_xyzrpy_error_xyz_y_ = 0;
@@ -72,13 +78,14 @@ namespace Ten
         double _r2_xyzrpy_error_rpy_roll_ = 0;
         double _r2_xyzrpy_error_rpy_pitch_ = 0;
         double _r2_xyzrpy_error_rpy_yaw_ = 0;
+
         //r2雷达初始误差
-        double _r2_xyzrpy_init_error_xyz_x_ = 0;
-        double _r2_xyzrpy_init_error_xyz_y_ = 0;
-        double _r2_xyzrpy_init_error_xyz_z_ = 0;
-        double _r2_xyzrpy_init_error_rpy_roll_ = 0;
-        double _r2_xyzrpy_init_error_rpy_pitch_ = 0;
-        double _r2_xyzrpy_init_error_rpy_yaw_ = 0;
+        std::atomic<double> _r2_xyzrpy_init_error_xyz_x_;
+        std::atomic<double> _r2_xyzrpy_init_error_xyz_y_;
+        std::atomic<double> _r2_xyzrpy_init_error_xyz_z_;
+        std::atomic<double> _r2_xyzrpy_init_error_rpy_roll_;
+        std::atomic<double> _r2_xyzrpy_init_error_rpy_pitch_;
+        std::atomic<double> _r2_xyzrpy_init_error_rpy_yaw_;
 
         // #define _coner_path_ "/home/robocon/rc2026/model/corner5/best"
         // #define _juanzhou_path_ "/home/robocon/rc2026/model/juanZhou_cls1/best"
@@ -218,4 +225,10 @@ namespace Ten
     std::vector<int> _global_path_;
 
     std::string _kfs_path_;
+
+    //输入参数
+    int _input_parameter_[30] = {0};
+
+    double _max_z_ = 0.0;
+    
 }

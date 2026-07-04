@@ -7,11 +7,12 @@
 #include <mutex>
 #include <unistd.h>
 #include "threadpool.h"
+#include "camera_virtual.h"
 
 namespace Ten
 {
 
-class Ten_usb_cam
+class Ten_usb_cam : public camera_virtual
 {
 public:
     //禁用拷贝构造

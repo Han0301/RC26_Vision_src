@@ -355,13 +355,16 @@ target_sources(merge_node
   src/orb/orb_debug.cpp
   src/apriltag/apriltag.cpp
   src/superstratum/controlR2.cpp
+  src/superstratum/controlR1.cpp
+  src/superstratum/super.cpp
   src/mapping/mapping.cpp
   src/recognition/world_to_camera.cpp
   src/recognition/camera_calibration.cpp
   #src/recognition/zbuffer_simplify.cpp
   src/recognition/occlusion_handing.cpp
   src/kfs_detector/kfs_detector.cpp
-  
+  src/debug/ros_debug.cpp
+  src/kfs_locator/set_result.cpp
   src/livox_ros_driver2/src/driver_node.cpp
   src/livox_ros_driver2/src/lds.cpp
   src/livox_ros_driver2/src/lds_lidar.cpp
@@ -387,6 +390,8 @@ target_sources(merge_node
   src/point_lio/src/preprocess.cpp 
   src/point_lio/src/Estimator.cpp 
   src/point_lio/src/IMU_Processing.cpp
+
+  src/apriltag_detect_r1/apriltag_detector.cpp
 )
 
 # target_sources(merge2_node

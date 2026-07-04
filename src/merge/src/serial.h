@@ -8,6 +8,11 @@
 #include <unistd.h>
 #include "./parameter/parameter.h"
 #include "threadpool.h"
+#include <fcntl.h>      // open 系统调用
+#include <unistd.h>     // close 系统调用
+#include <errno.h>      // 错误码
+#include <sys/ioctl.h>
+#include <linux/serial.h>
 
 namespace Ten
 {
@@ -17,9 +22,9 @@ namespace Ten
 //全局只有一个对象
 class Ten_serial
 {
-#define FRAME_HEAD_0 0xAA //帧头字节1
-#define FRAME_HEAD_1 0x55  // 帧头字节2
-#define FRAME_END_0 0xEE // 帧尾字节1
+#define FRAME_HEAD_0 0xAA //帧头字节1 [0]
+#define FRAME_HEAD_1 0x55  // 帧头字节2 [1]
+#define FRAME_END_0 0xEE // 帧尾字节1 [5+len]
 public:
     //禁用拷贝构造
     Ten_serial(const Ten_serial& serial) = delete;
@@ -95,6 +100,8 @@ private:
 
     bool init_serial(const std::string& port = "/dev/ttyACM", const size_t& serial_baud = 115200);
 
+    bool set_low_latency();
+
 // 串口读取状态机
 enum ReadState {
     WAIT_HEAD_0,
@@ -115,6 +122,7 @@ serial::Serial serial_;
 std::mutex send_mtx_;
 std::mutex read_mtx_;
 static std::once_flag serial_flag_;
+std::string port_;
 };
 
 }

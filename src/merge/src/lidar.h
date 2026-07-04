@@ -141,6 +141,16 @@ public:
         return true;
     }
 
+    void clear()
+    {
+        // 和 push 共用同一把锁，保证写侧操作互斥
+        std::lock_guard<std::mutex> lock(mtx_);
+        
+        head_.store(0, std::memory_order_release);
+        tail_.store(0, std::memory_order_release);
+        count_.store(0, std::memory_order_release);
+    }
+
 private:
     // 核心修复：vector存储 智能指针（可拷贝，兼容STL）
     std::vector<std::unique_ptr<Ten_one_write_multiple_read<T>>> storage_;
@@ -157,6 +167,7 @@ extern RCUQueue<nav_msgs::Odometry> _TF_GET_;
 extern RCUQueue<nav_msgs::Odometry> _TF_GET2_;
 extern RCUQueue<livox_ros_driver::CustomMsg> _LIVOX_GET_;
 extern RCUQueue<sensor_msgs::PointCloud2> _Map_GET_;
+extern RCUQueue<sensor_msgs::PointCloud2> _Map_GET2_;
 extern RCUQueue<sensor_msgs::Imu> _IMU_GET_;
 
 }

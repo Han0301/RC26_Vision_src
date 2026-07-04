@@ -188,10 +188,16 @@ private:
 extern Ten::ThreadPool_flag _TREADPOOL_FLAG_;
 extern Ten::ThreadPool_flag _LASERMAPPING_FLAG_;
 extern Ten::ThreadPool_flag _PUB_CLOUD_FLAG_;
+extern Ten::ThreadPool_flag _PUB_CLOUD_FLAG2_;
 extern Ten::ThreadPool_flag _CAMERA_KFS_FLAG_;
 extern Ten::ThreadPool_flag _APRILTAG_FLAG_;
 extern Ten::ThreadPool_flag _MAP_FLAG_;
+extern Ten::ThreadPool_flag _PARAMETER_FLAG_;
 extern Ten::ThreadPool_flag _KFS_DECTECTOR_FLAG_;
+extern Ten::ThreadPool_flag _POINT_LIO_RUN_FLAG_;
+extern Ten::ThreadPool_flag _POINT_LIO_CHANGE_FLAG_;
+extern Ten::ThreadPool_flag _FAST_LIO_MAPING_FLAG_;
+extern Ten::ThreadPool_flag _CAMERA_CLOSE_FLAG_;
 
 }
 

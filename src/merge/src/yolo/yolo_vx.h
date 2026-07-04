@@ -23,12 +23,20 @@ namespace Ten
             {
                 core_ = ov::Core();
                 model_ = core_.read_model(model_path + ".xml", model_path + ".bin");
-                if(xpu == "gpu") 
+                try
                 {
-                    core_.set_property("GPU", ov::cache_dir("./cache"));
-                    compiled_model_ = core_.compile_model(model_, "GPU");
+                    if(xpu == "gpu") 
+                    {
+                        core_.set_property("GPU", ov::cache_dir("./cache"));
+                        compiled_model_ = core_.compile_model(model_, "GPU");
+                    }
+                    else compiled_model_ = core_.compile_model(model_, "CPU");
                 }
-                else compiled_model_ = core_.compile_model(model_, "CPU");
+                catch(const std::exception& e)
+                {
+                    std::cerr << e.what() << '\n';
+                    compiled_model_ = core_.compile_model(model_, "CPU");
+                }
                 input_shape_ = compiled_model_.input().get_shape();
                 output_shape_ = compiled_model_.output().get_shape();
                 infer_request_ = compiled_model_.create_infer_request();

@@ -17,8 +17,9 @@ namespace Ten
 
 RCUQueue<nav_msgs::Odometry> _TF_GET_{20};
 RCUQueue<nav_msgs::Odometry> _TF_GET2_{10};
-RCUQueue<livox_ros_driver::CustomMsg> _LIVOX_GET_{3};
+RCUQueue<livox_ros_driver::CustomMsg> _LIVOX_GET_{2};
 RCUQueue<sensor_msgs::PointCloud2> _Map_GET_{3};
+RCUQueue<sensor_msgs::PointCloud2> _Map_GET2_{3};
 RCUQueue<sensor_msgs::Imu> _IMU_GET_{20};
 
 }

@@ -4,9 +4,12 @@
 #include <iostream>
 #include <string>
 #include <Eigen/Dense>  
+#include <atomic>
+#include <mutex>
 
 namespace Ten
 {    
+
     namespace superstratum
     {
         //r1车相对雷达
@@ -24,12 +27,12 @@ namespace Ten
         extern double _r1_xyzrpy_error_rpy_pitch_;
         extern double _r1_xyzrpy_error_rpy_yaw_;
         //r1雷达初始误差
-        extern double _r1_xyzrpy_init_error_xyz_x_;
-        extern double _r1_xyzrpy_init_error_xyz_y_;
-        extern double _r1_xyzrpy_init_error_xyz_z_;
-        extern double _r1_xyzrpy_init_error_rpy_roll_;
-        extern double _r1_xyzrpy_init_error_rpy_pitch_;
-        extern double _r1_xyzrpy_init_error_rpy_yaw_;
+        extern std::atomic<double> _r1_xyzrpy_init_error_xyz_x_;
+        extern std::atomic<double> _r1_xyzrpy_init_error_xyz_y_;
+        extern std::atomic<double> _r1_xyzrpy_init_error_xyz_z_;
+        extern std::atomic<double> _r1_xyzrpy_init_error_rpy_roll_;
+        extern std::atomic<double> _r1_xyzrpy_init_error_rpy_pitch_;
+        extern std::atomic<double> _r1_xyzrpy_init_error_rpy_yaw_;
         //r2车相对雷达
         extern double _r2_xyzrpy_car_xyz_x_;
         extern double _r2_xyzrpy_car_xyz_y_;
@@ -45,12 +48,12 @@ namespace Ten
         extern double _r2_xyzrpy_error_rpy_pitch_;
         extern double _r2_xyzrpy_error_rpy_yaw_;
         //r2雷达初始误差
-        extern double _r2_xyzrpy_init_error_xyz_x_;
-        extern double _r2_xyzrpy_init_error_xyz_y_;
-        extern double _r2_xyzrpy_init_error_xyz_z_;
-        extern double _r2_xyzrpy_init_error_rpy_roll_;
-        extern double _r2_xyzrpy_init_error_rpy_pitch_;
-        extern double _r2_xyzrpy_init_error_rpy_yaw_;
+        extern std::atomic<double> _r2_xyzrpy_init_error_xyz_x_;
+        extern std::atomic<double> _r2_xyzrpy_init_error_xyz_y_;
+        extern std::atomic<double> _r2_xyzrpy_init_error_xyz_z_;
+        extern std::atomic<double> _r2_xyzrpy_init_error_rpy_roll_;
+        extern std::atomic<double> _r2_xyzrpy_init_error_rpy_pitch_;
+        extern std::atomic<double> _r2_xyzrpy_init_error_rpy_yaw_;
         //识别卷轴
         extern std::string _coner_path_;
         extern std::string _juanzhou_path_;
@@ -164,14 +167,21 @@ namespace Ten
 
     extern std::string _kfs_path_;
 
+    //输入参数
+    extern int _input_parameter_[30];
+
+    extern double _max_z_;
+
     namespace parameter
     {
+        extern std::mutex parameter_mtx_;
 
         class loadyaml
         {
         public:
-        loadyaml()
+        static void loadyamlall()
         {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
             // 直接读取 yaml 文件
             YAML::Node config = YAML::LoadFile(std::string(ROOT_DIR) + std::string("src/parameter/config.yaml"));
 
@@ -353,6 +363,8 @@ namespace Ten
 
             _kfs_path_ = config["_kfs_path_"].as<std::string>();
 
+            Ten::_max_z_                                = config["_max_z_"].as<double>();
+
 
             // ==============================================
             // 【全部打印】加载完成后输出所有参数
@@ -520,10 +532,540 @@ namespace Ten
             std::cout << "\n==========================================================\n" << std::endl;
         }
 
-        
+        // ==============================================
+        // 分组重置参数函数（重新从YAML文件加载对应分组参数）
+        // ==============================================
+
+        // ========== R1 车体相关参数 ==========
+        /// @brief 重新加载R1车体相对雷达的外参(xyz + rpy)
+        static void resetR1CarExtrinsic()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            superstratum::_r1_xyzrpy_car_xyz_x_                = config["_r1_xyzrpy_car_xyz_x_"].as<double>();
+            superstratum::_r1_xyzrpy_car_xyz_y_                = config["_r1_xyzrpy_car_xyz_y_"].as<double>();
+            superstratum::_r1_xyzrpy_car_xyz_z_                = config["_r1_xyzrpy_car_xyz_z_"].as<double>();
+            superstratum::_r1_xyzrpy_car_rpy_roll_             = config["_r1_xyzrpy_car_rpy_roll_"].as<double>();
+            superstratum::_r1_xyzrpy_car_rpy_pitch_            = config["_r1_xyzrpy_car_rpy_pitch_"].as<double>();
+            superstratum::_r1_xyzrpy_car_rpy_yaw_              = config["_r1_xyzrpy_car_rpy_yaw_"].as<double>();
+        }
+
+        /// @brief 重新加载R1建图误差参数(xyz + rpy)
+        static void resetR1MappingError()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            superstratum::_r1_xyzrpy_error_xyz_x_              = config["_r1_xyzrpy_error_xyz_x_"].as<double>();
+            superstratum::_r1_xyzrpy_error_xyz_y_              = config["_r1_xyzrpy_error_xyz_y_"].as<double>();
+            superstratum::_r1_xyzrpy_error_xyz_z_              = config["_r1_xyzrpy_error_xyz_z_"].as<double>();
+            superstratum::_r1_xyzrpy_error_rpy_roll_           = config["_r1_xyzrpy_error_rpy_roll_"].as<double>();
+            superstratum::_r1_xyzrpy_error_rpy_pitch_          = config["_r1_xyzrpy_error_rpy_pitch_"].as<double>();
+            superstratum::_r1_xyzrpy_error_rpy_yaw_            = config["_r1_xyzrpy_error_rpy_yaw_"].as<double>();
+        }
+
+        /// @brief 重新加载R1雷达初始误差参数(xyz + rpy, 原子变量)
+        static void resetR1InitError()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            superstratum::_r1_xyzrpy_init_error_xyz_x_.store(    config["_r1_xyzrpy_init_error_xyz_x_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_xyz_y_.store(    config["_r1_xyzrpy_init_error_xyz_y_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_xyz_z_.store(    config["_r1_xyzrpy_init_error_xyz_z_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_rpy_roll_.store( config["_r1_xyzrpy_init_error_rpy_roll_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_rpy_pitch_.store(config["_r1_xyzrpy_init_error_rpy_pitch_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_rpy_yaw_.store(  config["_r1_xyzrpy_init_error_rpy_yaw_"].as<double>(), std::memory_order_seq_cst);
+        }
+
+        /// @brief 重新加载R1全部外参与误差参数（单次读文件）
+        static void resetR1AllParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            // 车体外参
+            superstratum::_r1_xyzrpy_car_xyz_x_                = config["_r1_xyzrpy_car_xyz_x_"].as<double>();
+            superstratum::_r1_xyzrpy_car_xyz_y_                = config["_r1_xyzrpy_car_xyz_y_"].as<double>();
+            superstratum::_r1_xyzrpy_car_xyz_z_                = config["_r1_xyzrpy_car_xyz_z_"].as<double>();
+            superstratum::_r1_xyzrpy_car_rpy_roll_             = config["_r1_xyzrpy_car_rpy_roll_"].as<double>();
+            superstratum::_r1_xyzrpy_car_rpy_pitch_            = config["_r1_xyzrpy_car_rpy_pitch_"].as<double>();
+            superstratum::_r1_xyzrpy_car_rpy_yaw_              = config["_r1_xyzrpy_car_rpy_yaw_"].as<double>();
+            // 建图误差
+            superstratum::_r1_xyzrpy_error_xyz_x_              = config["_r1_xyzrpy_error_xyz_x_"].as<double>();
+            superstratum::_r1_xyzrpy_error_xyz_y_              = config["_r1_xyzrpy_error_xyz_y_"].as<double>();
+            superstratum::_r1_xyzrpy_error_xyz_z_              = config["_r1_xyzrpy_error_xyz_z_"].as<double>();
+            superstratum::_r1_xyzrpy_error_rpy_roll_           = config["_r1_xyzrpy_error_rpy_roll_"].as<double>();
+            superstratum::_r1_xyzrpy_error_rpy_pitch_          = config["_r1_xyzrpy_error_rpy_pitch_"].as<double>();
+            superstratum::_r1_xyzrpy_error_rpy_yaw_            = config["_r1_xyzrpy_error_rpy_yaw_"].as<double>();
+            // 初始误差（原子操作）
+            superstratum::_r1_xyzrpy_init_error_xyz_x_.store(    config["_r1_xyzrpy_init_error_xyz_x_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_xyz_y_.store(    config["_r1_xyzrpy_init_error_xyz_y_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_xyz_z_.store(    config["_r1_xyzrpy_init_error_xyz_z_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_rpy_roll_.store( config["_r1_xyzrpy_init_error_rpy_roll_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_rpy_pitch_.store(config["_r1_xyzrpy_init_error_rpy_pitch_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r1_xyzrpy_init_error_rpy_yaw_.store(  config["_r1_xyzrpy_init_error_rpy_yaw_"].as<double>(), std::memory_order_seq_cst);
+        }
+
+        // ========== R2 车体相关参数 ==========
+        /// @brief 重新加载R2车体相对雷达的外参(xyz + rpy)
+        static void resetR2CarExtrinsic()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            superstratum::_r2_xyzrpy_car_xyz_x_                = config["_r2_xyzrpy_car_xyz_x_"].as<double>();
+            superstratum::_r2_xyzrpy_car_xyz_y_                = config["_r2_xyzrpy_car_xyz_y_"].as<double>();
+            superstratum::_r2_xyzrpy_car_xyz_z_                = config["_r2_xyzrpy_car_xyz_z_"].as<double>();
+            superstratum::_r2_xyzrpy_car_rpy_roll_             = config["_r2_xyzrpy_car_rpy_roll_"].as<double>();
+            superstratum::_r2_xyzrpy_car_rpy_pitch_            = config["_r2_xyzrpy_car_rpy_pitch_"].as<double>();
+            superstratum::_r2_xyzrpy_car_rpy_yaw_              = config["_r2_xyzrpy_car_rpy_yaw_"].as<double>();
+        }
+
+        /// @brief 重新加载R2建图误差参数(xyz + rpy)
+        static void resetR2MappingError()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            superstratum::_r2_xyzrpy_error_xyz_x_              = config["_r2_xyzrpy_error_xyz_x_"].as<double>();
+            superstratum::_r2_xyzrpy_error_xyz_y_              = config["_r2_xyzrpy_error_xyz_y_"].as<double>();
+            superstratum::_r2_xyzrpy_error_xyz_z_              = config["_r2_xyzrpy_error_xyz_z_"].as<double>();
+            superstratum::_r2_xyzrpy_error_rpy_roll_           = config["_r2_xyzrpy_error_rpy_roll_"].as<double>();
+            superstratum::_r2_xyzrpy_error_rpy_pitch_          = config["_r2_xyzrpy_error_rpy_pitch_"].as<double>();
+            superstratum::_r2_xyzrpy_error_rpy_yaw_            = config["_r2_xyzrpy_error_rpy_yaw_"].as<double>();
+        }
+
+        /// @brief 重新加载R2雷达初始误差参数(xyz + rpy, 原子变量)
+        static void resetR2InitError()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            superstratum::_r2_xyzrpy_init_error_xyz_x_.store(    config["_r2_xyzrpy_init_error_xyz_x_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_xyz_y_.store(    config["_r2_xyzrpy_init_error_xyz_y_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_xyz_z_.store(    config["_r2_xyzrpy_init_error_xyz_z_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_rpy_roll_.store( config["_r2_xyzrpy_init_error_rpy_roll_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_rpy_pitch_.store(config["_r2_xyzrpy_init_error_rpy_pitch_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_rpy_yaw_.store(  config["_r2_xyzrpy_init_error_rpy_yaw_"].as<double>(), std::memory_order_seq_cst);
+        }
+
+        /// @brief 重新加载R2全部外参与误差参数（单次读文件）
+        static void resetR2AllParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            // 车体外参
+            superstratum::_r2_xyzrpy_car_xyz_x_                = config["_r2_xyzrpy_car_xyz_x_"].as<double>();
+            superstratum::_r2_xyzrpy_car_xyz_y_                = config["_r2_xyzrpy_car_xyz_y_"].as<double>();
+            superstratum::_r2_xyzrpy_car_xyz_z_                = config["_r2_xyzrpy_car_xyz_z_"].as<double>();
+            superstratum::_r2_xyzrpy_car_rpy_roll_             = config["_r2_xyzrpy_car_rpy_roll_"].as<double>();
+            superstratum::_r2_xyzrpy_car_rpy_pitch_            = config["_r2_xyzrpy_car_rpy_pitch_"].as<double>();
+            superstratum::_r2_xyzrpy_car_rpy_yaw_              = config["_r2_xyzrpy_car_rpy_yaw_"].as<double>();
+            // 建图误差
+            superstratum::_r2_xyzrpy_error_xyz_x_              = config["_r2_xyzrpy_error_xyz_x_"].as<double>();
+            superstratum::_r2_xyzrpy_error_xyz_y_              = config["_r2_xyzrpy_error_xyz_y_"].as<double>();
+            superstratum::_r2_xyzrpy_error_xyz_z_              = config["_r2_xyzrpy_error_xyz_z_"].as<double>();
+            superstratum::_r2_xyzrpy_error_rpy_roll_           = config["_r2_xyzrpy_error_rpy_roll_"].as<double>();
+            superstratum::_r2_xyzrpy_error_rpy_pitch_          = config["_r2_xyzrpy_error_rpy_pitch_"].as<double>();
+            superstratum::_r2_xyzrpy_error_rpy_yaw_            = config["_r2_xyzrpy_error_rpy_yaw_"].as<double>();
+            // 初始误差（原子操作）
+            superstratum::_r2_xyzrpy_init_error_xyz_x_.store(    config["_r2_xyzrpy_init_error_xyz_x_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_xyz_y_.store(    config["_r2_xyzrpy_init_error_xyz_y_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_xyz_z_.store(    config["_r2_xyzrpy_init_error_xyz_z_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_rpy_roll_.store( config["_r2_xyzrpy_init_error_rpy_roll_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_rpy_pitch_.store(config["_r2_xyzrpy_init_error_rpy_pitch_"].as<double>(), std::memory_order_seq_cst);
+            superstratum::_r2_xyzrpy_init_error_rpy_yaw_.store(  config["_r2_xyzrpy_init_error_rpy_yaw_"].as<double>(), std::memory_order_seq_cst);
+        }
+
+
+        // ========== 卷轴识别相关参数 ==========
+        /// @brief 重新加载卷轴识别基础参数(模型路径、箱子数量)
+        static void resetRecognitionBaseParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            superstratum::_coner_path_                         = config["_coner_path_"].as<std::string>();
+            superstratum::_juanzhou_path_                      = config["_juanzhou_path_"].as<std::string>();
+            superstratum::_box_num_                            = config["_box_num_"].as<int>();
+        }
+
+        /// @brief 重新加载卷轴识别ROI与计数限制参数
+        static void resetRecognitionRoiParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            superstratum::_roi12_path_                         = config["_roi12_path_"].as<std::string>();
+            superstratum::_limit_count_1_                      = config["_limit_count_1_"].as<int>();
+            superstratum::_limit_count_2_                      = config["_limit_count_2_"].as<int>();
+            superstratum::_limit_count_3_                      = config["_limit_count_3_"].as<int>();
+            superstratum::_limit_count_4_                      = config["_limit_count_4_"].as<int>();
+        }
+
+        /// @brief 重新加载全部卷轴识别相关参数（单次读文件）
+        static void resetAllRecognitionParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            superstratum::_coner_path_                         = config["_coner_path_"].as<std::string>();
+            superstratum::_juanzhou_path_                      = config["_juanzhou_path_"].as<std::string>();
+            superstratum::_box_num_                            = config["_box_num_"].as<int>();
+            superstratum::_roi12_path_                         = config["_roi12_path_"].as<std::string>();
+            superstratum::_limit_count_1_                      = config["_limit_count_1_"].as<int>();
+            superstratum::_limit_count_2_                      = config["_limit_count_2_"].as<int>();
+            superstratum::_limit_count_3_                      = config["_limit_count_3_"].as<int>();
+            superstratum::_limit_count_4_                      = config["_limit_count_4_"].as<int>();
+        }
+
+        // ========== 重定位与点云处理参数 ==========
+        /// @brief 重新加载串口、重定位、点云下采样与雷达发布频率参数
+        static void resetRelocationAndPointCloudParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            _max_serial_num_                                   = config["_max_serial_num_"].as<int>();
+            _voxeldownsample_threshold_for_teaser_             = config["_voxeldownsample_threshold_for_teaser_"].as<double>();
+            _voxeldownsample_threshold_for_icp_                = config["_voxeldownsample_threshold_for_icp_"].as<double>();
+            _setmaxcorrespondencedistance_nano_gicp_           = config["_setmaxcorrespondencedistance_nano_gicp_"].as<double>();
+            _min_num_of_point_cloud_for_relocation_            = config["_min_num_of_point_cloud_for_relocation_"].as<size_t>();
+            _min_num_of_point_cloud_for_relocation2_           = config["_min_num_of_point_cloud_for_relocation2_"].as<size_t>();
+            _voxeldownsample_threshold_                        = config["_voxeldownsample_threshold_"].as<double>();
+            Ten::_laser_pub_hz_                                = config["_laser_pub_hz_"].as<double>();
+        }
+
+        // ========== 相机内参 ==========
+        /// @brief 重新加载640x480分辨率相机内参
+        static void resetCameraIntrinsic640()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            Ten::camera_fx_640                                 = config["camera_fx_640"].as<double>();
+            Ten::camera_fy_640                                 = config["camera_fy_640"].as<double>();
+            Ten::camera_cx_640                                 = config["camera_cx_640"].as<double>();
+            Ten::camera_cy_640                                 = config["camera_cy_640"].as<double>();
+        }
+
+        /// @brief 重新加载1920x1080分辨率相机内参
+        static void resetCameraIntrinsic1080()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            Ten::camera_fx_1080                                = config["camera_fx_1080"].as<double>();
+            Ten::camera_fy_1080                                = config["camera_fy_1080"].as<double>();
+            Ten::camera_cx_1080                                = config["camera_cx_1080"].as<double>();
+            Ten::camera_cy_1080                                = config["camera_cy_1080"].as<double>();
+        }
+
+        /// @brief 重新加载全部分辨率的相机内参（单次读文件）
+        static void resetAllCameraIntrinsic()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            Ten::camera_fx_640                                 = config["camera_fx_640"].as<double>();
+            Ten::camera_fy_640                                 = config["camera_fy_640"].as<double>();
+            Ten::camera_cx_640                                 = config["camera_cx_640"].as<double>();
+            Ten::camera_cy_640                                 = config["camera_cy_640"].as<double>();
+            Ten::camera_fx_1080                                = config["camera_fx_1080"].as<double>();
+            Ten::camera_fy_1080                                = config["camera_fy_1080"].as<double>();
+            Ten::camera_cx_1080                                = config["camera_cx_1080"].as<double>();
+            Ten::camera_cy_1080                                = config["camera_cy_1080"].as<double>();
+        }
+
+        // ========== 传感器外参矩阵 ==========
+        /// @brief 重新加载雷达到相机的4x4变换矩阵
+        static void resetLidarToCameraTransform()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(0,0) = config["lidar_to_camera_00"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(0,1) = config["lidar_to_camera_01"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(0,2) = config["lidar_to_camera_02"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(0,3) = config["lidar_to_camera_03"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(1,0) = config["lidar_to_camera_10"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(1,1) = config["lidar_to_camera_11"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(1,2) = config["lidar_to_camera_12"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(1,3) = config["lidar_to_camera_13"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(2,0) = config["lidar_to_camera_20"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(2,1) = config["lidar_to_camera_21"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(2,2) = config["lidar_to_camera_22"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(2,3) = config["lidar_to_camera_23"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(3,0) = config["lidar_to_camera_30"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(3,1) = config["lidar_to_camera_31"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(3,2) = config["lidar_to_camera_32"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(3,3) = config["lidar_to_camera_33"].as<double>();
+        }
+
+        // ========== EKF 滤波参数 ==========
+        /// @brief 重新加载EKF过程噪声系数参数
+        static void resetEKFParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            Ten::_q_pos_                                = config["_q_pos_"].as<double>();
+            Ten::_q_att_                                = config["_q_att_"].as<double>();
+            Ten::_q_vel_                                = config["_q_vel_"].as<double>();
+            Ten::_q_ang_                                = config["_q_ang_"].as<double>();
+        }
+
+        /// @brief 重新加载IMU-EKF过程噪声系数参数
+        static void resetImuEKFParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            Ten::_imu_q_pos_                                = config["_imu_q_pos_"].as<double>();
+            Ten::_imu_q_att_                                = config["_imu_q_att_"].as<double>();
+            Ten::_imu_q_vel_                                = config["_imu_q_vel_"].as<double>();
+        }
+
+        // ========== 雷达自身初始误差 ==========
+        /// @brief 重新加载雷达自身的初始误差参数(xyz + rpy)
+        static void resetLidarSelfInitError()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            Ten::_lidar_xyzrpy_init_error_xyz_x_              = config["_lidar_xyzrpy_init_error_xyz_x_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_xyz_y_              = config["_lidar_xyzrpy_init_error_xyz_y_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_xyz_z_              = config["_lidar_xyzrpy_init_error_xyz_z_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_rpy_roll_           = config["_lidar_xyzrpy_init_error_rpy_roll_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_rpy_pitch_          = config["_lidar_xyzrpy_init_error_rpy_pitch_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_rpy_yaw_            = config["_lidar_xyzrpy_init_error_rpy_yaw_"].as<double>();
+        }
+
+        // ========== AprilTag 全量参数 ==========
+        /// @brief 重新加载全部AprilTag相关参数(内参、检测、融合、显示)
+        static void resetAprilTagAllParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            // 内参与畸变
+            APRILTAG_FX                            = config["APRILTAG_FX"].as<double>();
+            APRILTAG_FY                            = config["APRILTAG_FY"].as<double>();
+            APRILTAG_CX                            = config["APRILTAG_CX"].as<double>();
+            APRILTAG_CY                            = config["APRILTAG_CY"].as<double>();
+            APRILTAG_K1                            = config["APRILTAG_K1"].as<double>();
+            APRILTAG_K2                            = config["APRILTAG_K2"].as<double>();
+            APRILTAG_P1                            = config["APRILTAG_P1"].as<double>();
+            APRILTAG_P2                            = config["APRILTAG_P2"].as<double>();
+            APRILTAG_K3                            = config["APRILTAG_K3"].as<double>();
+            // 相机硬件配置
+            APRILTAG_CAMERA_WIDTH                   = config["APRILTAG_CAMERA_WIDTH"].as<int>();
+            APRILTAG_CAMERA_HEIGHT                  = config["APRILTAG_CAMERA_HEIGHT"].as<int>();
+            APRILTAG_CAMERA_FPS                     = config["APRILTAG_CAMERA_FPS"].as<int>();
+            // 检测算法配置
+            APRILTAG_TAG_SIZE                       = config["APRILTAG_TAG_SIZE"].as<double>();
+            APRILTAG_TAG_SPACING                    = config["APRILTAG_TAG_SPACING"].as<double>();
+            APRILTAG_QUAD_DECIMATE                  = config["APRILTAG_QUAD_DECIMATE"].as<double>();
+            APRILTAG_QUAD_SIGMA                     = config["APRILTAG_QUAD_SIGMA"].as<double>();
+            APRILTAG_NTHREADS                       = config["APRILTAG_NTHREADS"].as<int>();
+            APRILTAG_REFINE_EDGES                   = config["APRILTAG_REFINE_EDGES"].as<bool>();
+            // ID与融合配置
+            APRILTAG_PRIMARY_ID                     = config["APRILTAG_PRIMARY_ID"].as<int>();
+            APRILTAG_AUX_ID                         = config["APRILTAG_AUX_ID"].as<int>();
+            APRILTAG_SINGLE_TAG_MODE                = config["APRILTAG_SINGLE_TAG_MODE"].as<bool>();
+            APRILTAG_SINGLE_TAG_ID                  = config["APRILTAG_SINGLE_TAG_ID"].as<int>();
+            APRILTAG_FUSION_BIAS_X                  = config["APRILTAG_FUSION_BIAS_X"].as<double>();
+            APRILTAG_FUSION_BIAS_Y                  = config["APRILTAG_FUSION_BIAS_Y"].as<double>();
+            APRILTAG_FUSION_BIAS_Z                  = config["APRILTAG_FUSION_BIAS_Z"].as<double>();
+            // 世界坐标系偏移
+            APRILTAG_WORLD_BIAS_X                   = config["APRILTAG_WORLD_BIAS_X"].as<double>();
+            APRILTAG_WORLD_BIAS_Y                   = config["APRILTAG_WORLD_BIAS_Y"].as<double>();
+            APRILTAG_WORLD_BIAS_Z                   = config["APRILTAG_WORLD_BIAS_Z"].as<double>();
+            // 滤波配置
+            APRILTAG_JUMP_WINDOW                    = config["APRILTAG_JUMP_WINDOW"].as<int>();
+            APRILTAG_YAW_EMA_ALPHA                  = config["APRILTAG_YAW_EMA_ALPHA"].as<double>();
+            // 显示窗口配置
+            APRILTAG_ENABLE_SAW_WINDOW              = config["APRILTAG_ENABLE_SAW_WINDOW"].as<bool>();
+            APRILTAG_DRAW_FONT_SCALE                = config["APRILTAG_DRAW_FONT_SCALE"].as<double>();
+            APRILTAG_DRAW_THICKNESS                 = config["APRILTAG_DRAW_THICKNESS"].as<int>();
+            APRILTAG_SAW_WINDOW_NAME                = config["APRILTAG_SAW_WINDOW_NAME"].as<std::string>();
+        }
+
+        // ========== USB 设备参数 ==========
+        /// @brief 重新加载USB相机设备号参数
+        static void resetUsbDeviceParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            _usb_device_num1_                 = config["_usb_device_num1_"].as<int>();
+            _usb_device_num2_                 = config["_usb_device_num2_"].as<int>();
+            _usb_device_num3_                 = config["_usb_device_num3_"].as<int>();
+        }
+
+        // ========== 路径配置参数 ==========
+        /// @brief 重新加载路径配置参数
+        static void resetPathParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+            _kfs_path_ = config["_kfs_path_"].as<std::string>();
+        }
+
+        // ========== 全量总重置 ==========
+        /// @brief 一键重新加载所有全局参数（完整刷新配置，单次读文件）
+        static void resetAllParams()
+        {
+            std::lock_guard<std::mutex> lock(parameter_mtx_);
+            YAML::Node config = loadConfigFile();
+
+            // ---------- superstratum 命名空间参数 ----------
+            // R1全量
+            superstratum::_r1_xyzrpy_car_xyz_x_                = config["_r1_xyzrpy_car_xyz_x_"].as<double>();
+            superstratum::_r1_xyzrpy_car_xyz_y_                = config["_r1_xyzrpy_car_xyz_y_"].as<double>();
+            superstratum::_r1_xyzrpy_car_xyz_z_                = config["_r1_xyzrpy_car_xyz_z_"].as<double>();
+            superstratum::_r1_xyzrpy_car_rpy_roll_             = config["_r1_xyzrpy_car_rpy_roll_"].as<double>();
+            superstratum::_r1_xyzrpy_car_rpy_pitch_            = config["_r1_xyzrpy_car_rpy_pitch_"].as<double>();
+            superstratum::_r1_xyzrpy_car_rpy_yaw_              = config["_r1_xyzrpy_car_rpy_yaw_"].as<double>();
+            superstratum::_r1_xyzrpy_error_xyz_x_              = config["_r1_xyzrpy_error_xyz_x_"].as<double>();
+            superstratum::_r1_xyzrpy_error_xyz_y_              = config["_r1_xyzrpy_error_xyz_y_"].as<double>();
+            superstratum::_r1_xyzrpy_error_xyz_z_              = config["_r1_xyzrpy_error_xyz_z_"].as<double>();
+            superstratum::_r1_xyzrpy_error_rpy_roll_           = config["_r1_xyzrpy_error_rpy_roll_"].as<double>();
+            superstratum::_r1_xyzrpy_error_rpy_pitch_          = config["_r1_xyzrpy_error_rpy_pitch_"].as<double>();
+            superstratum::_r1_xyzrpy_error_rpy_yaw_            = config["_r1_xyzrpy_error_rpy_yaw_"].as<double>();
+            superstratum::_r1_xyzrpy_init_error_xyz_x_              = config["_r1_xyzrpy_init_error_xyz_x_"].as<double>();
+            superstratum::_r1_xyzrpy_init_error_xyz_y_              = config["_r1_xyzrpy_init_error_xyz_y_"].as<double>();
+            superstratum::_r1_xyzrpy_init_error_xyz_z_              = config["_r1_xyzrpy_init_error_xyz_z_"].as<double>();
+            superstratum::_r1_xyzrpy_init_error_rpy_roll_           = config["_r1_xyzrpy_init_error_rpy_roll_"].as<double>();
+            superstratum::_r1_xyzrpy_init_error_rpy_pitch_          = config["_r1_xyzrpy_init_error_rpy_pitch_"].as<double>();
+            superstratum::_r1_xyzrpy_init_error_rpy_yaw_            = config["_r1_xyzrpy_init_error_rpy_yaw_"].as<double>();
+
+            // R2全量
+            superstratum::_r2_xyzrpy_car_xyz_x_                = config["_r2_xyzrpy_car_xyz_x_"].as<double>();
+            superstratum::_r2_xyzrpy_car_xyz_y_                = config["_r2_xyzrpy_car_xyz_y_"].as<double>();
+            superstratum::_r2_xyzrpy_car_xyz_z_                = config["_r2_xyzrpy_car_xyz_z_"].as<double>();
+            superstratum::_r2_xyzrpy_car_rpy_roll_             = config["_r2_xyzrpy_car_rpy_roll_"].as<double>();
+            superstratum::_r2_xyzrpy_car_rpy_pitch_            = config["_r2_xyzrpy_car_rpy_pitch_"].as<double>();
+            superstratum::_r2_xyzrpy_car_rpy_yaw_              = config["_r2_xyzrpy_car_rpy_yaw_"].as<double>();
+            superstratum::_r2_xyzrpy_error_xyz_x_              = config["_r2_xyzrpy_error_xyz_x_"].as<double>();
+            superstratum::_r2_xyzrpy_error_xyz_y_              = config["_r2_xyzrpy_error_xyz_y_"].as<double>();
+            superstratum::_r2_xyzrpy_error_xyz_z_              = config["_r2_xyzrpy_error_xyz_z_"].as<double>();
+            superstratum::_r2_xyzrpy_error_rpy_roll_           = config["_r2_xyzrpy_error_rpy_roll_"].as<double>();
+            superstratum::_r2_xyzrpy_error_rpy_pitch_          = config["_r2_xyzrpy_error_rpy_pitch_"].as<double>();
+            superstratum::_r2_xyzrpy_error_rpy_yaw_            = config["_r2_xyzrpy_error_rpy_yaw_"].as<double>();
+            superstratum::_r2_xyzrpy_init_error_xyz_x_              = config["_r2_xyzrpy_init_error_xyz_x_"].as<double>();
+            superstratum::_r2_xyzrpy_init_error_xyz_y_              = config["_r2_xyzrpy_init_error_xyz_y_"].as<double>();
+            superstratum::_r2_xyzrpy_init_error_xyz_z_              = config["_r2_xyzrpy_init_error_xyz_z_"].as<double>();
+            superstratum::_r2_xyzrpy_init_error_rpy_roll_           = config["_r2_xyzrpy_init_error_rpy_roll_"].as<double>();
+            superstratum::_r2_xyzrpy_init_error_rpy_pitch_          = config["_r2_xyzrpy_init_error_rpy_pitch_"].as<double>();
+            superstratum::_r2_xyzrpy_init_error_rpy_yaw_            = config["_r2_xyzrpy_init_error_rpy_yaw_"].as<double>();
+
+            // 卷轴识别全量
+            superstratum::_coner_path_                         = config["_coner_path_"].as<std::string>();
+            superstratum::_juanzhou_path_                      = config["_juanzhou_path_"].as<std::string>();
+            superstratum::_box_num_                            = config["_box_num_"].as<int>();
+            superstratum::_roi12_path_                         = config["_roi12_path_"].as<std::string>();
+            superstratum::_limit_count_1_                      = config["_limit_count_1_"].as<int>();
+            superstratum::_limit_count_2_                      = config["_limit_count_2_"].as<int>();
+            superstratum::_limit_count_3_                      = config["_limit_count_3_"].as<int>();
+            superstratum::_limit_count_4_                      = config["_limit_count_4_"].as<int>();
+
+            // ---------- 全局参数 ----------
+            _max_serial_num_                                   = config["_max_serial_num_"].as<int>();
+            _voxeldownsample_threshold_for_teaser_             = config["_voxeldownsample_threshold_for_teaser_"].as<double>();
+            _voxeldownsample_threshold_for_icp_                = config["_voxeldownsample_threshold_for_icp_"].as<double>();
+            _setmaxcorrespondencedistance_nano_gicp_           = config["_setmaxcorrespondencedistance_nano_gicp_"].as<double>();
+            _min_num_of_point_cloud_for_relocation_            = config["_min_num_of_point_cloud_for_relocation_"].as<size_t>();
+            _min_num_of_point_cloud_for_relocation2_           = config["_min_num_of_point_cloud_for_relocation2_"].as<size_t>();
+            _voxeldownsample_threshold_                        = config["_voxeldownsample_threshold_"].as<double>();
+
+            // 相机内参全量
+            Ten::camera_fx_640                                 = config["camera_fx_640"].as<double>();
+            Ten::camera_fy_640                                 = config["camera_fy_640"].as<double>();
+            Ten::camera_cx_640                                 = config["camera_cx_640"].as<double>();
+            Ten::camera_cy_640                                 = config["camera_cy_640"].as<double>();
+            Ten::camera_fx_1080                                = config["camera_fx_1080"].as<double>();
+            Ten::camera_fy_1080                                = config["camera_fy_1080"].as<double>();
+            Ten::camera_cx_1080                                = config["camera_cx_1080"].as<double>();
+            Ten::camera_cy_1080                                = config["camera_cy_1080"].as<double>();
+
+            // 雷达到相机变换矩阵
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(0,0) = config["lidar_to_camera_00"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(0,1) = config["lidar_to_camera_01"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(0,2) = config["lidar_to_camera_02"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(0,3) = config["lidar_to_camera_03"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(1,0) = config["lidar_to_camera_10"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(1,1) = config["lidar_to_camera_11"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(1,2) = config["lidar_to_camera_12"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(1,3) = config["lidar_to_camera_13"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(2,0) = config["lidar_to_camera_20"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(2,1) = config["lidar_to_camera_21"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(2,2) = config["lidar_to_camera_22"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(2,3) = config["lidar_to_camera_23"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(3,0) = config["lidar_to_camera_30"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(3,1) = config["lidar_to_camera_31"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(3,2) = config["lidar_to_camera_32"].as<double>();
+            Ten::superstratum::_lidar_to_camera_transform_matrix_(3,3) = config["lidar_to_camera_33"].as<double>();
+
+            Ten::_laser_pub_hz_                                = config["_laser_pub_hz_"].as<double>();
+
+            // EKF参数
+            Ten::_q_pos_                                = config["_q_pos_"].as<double>();
+            Ten::_q_att_                                = config["_q_att_"].as<double>();
+            Ten::_q_vel_                                = config["_q_vel_"].as<double>();
+            Ten::_q_ang_                                = config["_q_ang_"].as<double>();
+
+            // 雷达自身初始误差
+            Ten::_lidar_xyzrpy_init_error_xyz_x_              = config["_lidar_xyzrpy_init_error_xyz_x_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_xyz_y_              = config["_lidar_xyzrpy_init_error_xyz_y_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_xyz_z_              = config["_lidar_xyzrpy_init_error_xyz_z_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_rpy_roll_           = config["_lidar_xyzrpy_init_error_rpy_roll_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_rpy_pitch_          = config["_lidar_xyzrpy_init_error_rpy_pitch_"].as<double>();
+            Ten::_lidar_xyzrpy_init_error_rpy_yaw_            = config["_lidar_xyzrpy_init_error_rpy_yaw_"].as<double>();
+
+            // AprilTag全量
+            APRILTAG_FX                            = config["APRILTAG_FX"].as<double>();
+            APRILTAG_FY                            = config["APRILTAG_FY"].as<double>();
+            APRILTAG_CX                            = config["APRILTAG_CX"].as<double>();
+            APRILTAG_CY                            = config["APRILTAG_CY"].as<double>();
+            APRILTAG_K1                            = config["APRILTAG_K1"].as<double>();
+            APRILTAG_K2                            = config["APRILTAG_K2"].as<double>();
+            APRILTAG_P1                            = config["APRILTAG_P1"].as<double>();
+            APRILTAG_P2                            = config["APRILTAG_P2"].as<double>();
+            APRILTAG_K3                            = config["APRILTAG_K3"].as<double>();
+            APRILTAG_CAMERA_WIDTH                   = config["APRILTAG_CAMERA_WIDTH"].as<int>();
+            APRILTAG_CAMERA_HEIGHT                  = config["APRILTAG_CAMERA_HEIGHT"].as<int>();
+            APRILTAG_CAMERA_FPS                     = config["APRILTAG_CAMERA_FPS"].as<int>();
+            APRILTAG_TAG_SIZE                       = config["APRILTAG_TAG_SIZE"].as<double>();
+            APRILTAG_TAG_SPACING                    = config["APRILTAG_TAG_SPACING"].as<double>();
+            APRILTAG_QUAD_DECIMATE                  = config["APRILTAG_QUAD_DECIMATE"].as<double>();
+            APRILTAG_QUAD_SIGMA                     = config["APRILTAG_QUAD_SIGMA"].as<double>();
+            APRILTAG_NTHREADS                       = config["APRILTAG_NTHREADS"].as<int>();
+            APRILTAG_REFINE_EDGES                   = config["APRILTAG_REFINE_EDGES"].as<bool>();
+            APRILTAG_PRIMARY_ID                     = config["APRILTAG_PRIMARY_ID"].as<int>();
+            APRILTAG_AUX_ID                         = config["APRILTAG_AUX_ID"].as<int>();
+            APRILTAG_SINGLE_TAG_MODE                = config["APRILTAG_SINGLE_TAG_MODE"].as<bool>();
+            APRILTAG_SINGLE_TAG_ID                  = config["APRILTAG_SINGLE_TAG_ID"].as<int>();
+            APRILTAG_FUSION_BIAS_X                  = config["APRILTAG_FUSION_BIAS_X"].as<double>();
+            APRILTAG_FUSION_BIAS_Y                  = config["APRILTAG_FUSION_BIAS_Y"].as<double>();
+            APRILTAG_FUSION_BIAS_Z                  = config["APRILTAG_FUSION_BIAS_Z"].as<double>();
+            APRILTAG_WORLD_BIAS_X                   = config["APRILTAG_WORLD_BIAS_X"].as<double>();
+            APRILTAG_WORLD_BIAS_Y                   = config["APRILTAG_WORLD_BIAS_Y"].as<double>();
+            APRILTAG_WORLD_BIAS_Z                   = config["APRILTAG_WORLD_BIAS_Z"].as<double>();
+            APRILTAG_JUMP_WINDOW                    = config["APRILTAG_JUMP_WINDOW"].as<int>();
+            APRILTAG_YAW_EMA_ALPHA                  = config["APRILTAG_YAW_EMA_ALPHA"].as<double>();
+            APRILTAG_ENABLE_SAW_WINDOW              = config["APRILTAG_ENABLE_SAW_WINDOW"].as<bool>();
+            APRILTAG_DRAW_FONT_SCALE                = config["APRILTAG_DRAW_FONT_SCALE"].as<double>();
+            APRILTAG_DRAW_THICKNESS                 = config["APRILTAG_DRAW_THICKNESS"].as<int>();
+            APRILTAG_SAW_WINDOW_NAME                = config["APRILTAG_SAW_WINDOW_NAME"].as<std::string>();
+
+            // USB设备
+            _usb_device_num1_                 = config["_usb_device_num1_"].as<int>();
+            _usb_device_num2_                 = config["_usb_device_num2_"].as<int>();
+            _usb_device_num3_                 = config["_usb_device_num3_"].as<int>();
+
+            // IMU EKF
+            Ten::_imu_q_pos_                                = config["_imu_q_pos_"].as<double>();
+            Ten::_imu_q_att_                                = config["_imu_q_att_"].as<double>();
+            Ten::_imu_q_vel_                                = config["_imu_q_vel_"].as<double>();
+
+            // 路径
+            _kfs_path_ = config["_kfs_path_"].as<std::string>();
+        }
+
         private:
+        
+        /// @brief 统一读取YAML配置文件，与构造函数路径完全一致
+        static YAML::Node loadConfigFile()
+        {
+            return YAML::LoadFile(std::string(ROOT_DIR) + std::string("src/parameter/config.yaml"));
+        }
 
         };
+
+       
 
     }
 

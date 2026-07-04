@@ -463,7 +463,7 @@ int laserMapping()
     ros::NodeHandle nh("~");
     // 注册当前线程到RCU（写线程必须注册）
     urcu_memb_register_thread();
-
+    Ten::_LASERMAPPING_FLAG_.set_flag(true);
     readParameters(nh);
     cout<<"lidar_type: "<<lidar_type<<endl;
     ivox_ = std::make_shared<IVoxType>(ivox_options_);
@@ -563,38 +563,108 @@ int laserMapping()
         //std::cout << "timer2b: " << test2.timer() << std::endl;
         if(sync_packages(Measures)) 
         {
+
             //std::cout << "timer2e: " << test2.timer() << std::endl;
+            // if (flg_reset)
+            // {
+            //     ROS_WARN("reset when rosbag play back");
+            //     p_imu->Reset();
+            //     feats_undistort.reset(new PointCloudXYZI());
+            //     if (use_imu_as_input)
+            //     {
+            //         // state_in = kf_input.get_x();
+            //         state_in = state_input();
+            //         kf_input.change_P(P_init);
+            //     }
+            //     else
+            //     {
+            //         // state_out = kf_output.get_x();
+            //         state_out = state_output();
+            //         kf_output.change_P(P_init_output);
+            //     }
+            //     flg_first_scan = true;
+            //     is_first_frame = true;
+            //     flg_reset = false;
+            //     init_map = false;
+                
+            //     {
+            //         ivox_.reset(new IVoxType(ivox_options_));
+            //     }
+            //     sensor_msgs::PointCloud2 laserCloudmsg;
+            //     Ten::_LASERMAPPING_FLAG_.set_flag(false);
+            //     global_cloud_downsampled->clear();
+            //     // pcl::toROSMsg(*global_cloud_downsampled, laserCloudmsg);
+            //     // Ten::_Map_GET_.push(laserCloudmsg);
+            // }
+
             if (flg_reset)
             {
                 ROS_WARN("reset when rosbag play back");
-                p_imu->Reset();
+                p_imu->Reset();  // 确保Reset()里把 after_imu_init_、imu_need_init_ 复位为初始值
                 feats_undistort.reset(new PointCloudXYZI());
+                feats_down_world->clear();
+                init_feats_world.reset(new PointCloudXYZI());  // 清空初始地图缓存
+                depth_feats_world.clear();
+
+                // ========== 核心：重置卡尔曼滤波全部状态 ==========
                 if (use_imu_as_input)
                 {
-                    // state_in = kf_input.get_x();
-                    state_in = state_input();
-                    kf_input.change_P(P_init);
+                    // 构造一个全新的默认状态（位置0、速度0、零偏0、重力初始值）
+                    state_input state_zero;
+                    state_zero.gravity << VEC_FROM_ARRAY(gravity);
+                    state_zero.rot = M3D::Identity();  // 先临时设单位阵，后面重力对齐会覆盖
+                    state_zero.pos.setZero();
+                    state_zero.vel.setZero();
+                    state_zero.bg.setZero();
+                    state_zero.ba.setZero();
+                    // 外参保留原值，不重置
+                    state_zero.offset_R_L_I = kf_input.x_.offset_R_L_I;
+                    state_zero.offset_T_L_I = kf_input.x_.offset_T_L_I;
+                    
+                    kf_input.change_x(state_zero);  // 替换整个状态量
+                    kf_input.change_P(P_init);      // 协方差重置
                 }
                 else
                 {
-                    // state_out = kf_output.get_x();
-                    state_out = state_output();
+                    state_output state_zero;
+                    state_zero.gravity << VEC_FROM_ARRAY(gravity);
+                    state_zero.rot = M3D::Identity();
+                    state_zero.pos.setZero();
+                    state_zero.vel.setZero();
+                    state_zero.bg.setZero();
+                    state_zero.ba.setZero();
+                    state_zero.acc.setZero();
+                    state_zero.omg.setZero();
+                    state_zero.offset_R_L_I = kf_output.x_.offset_R_L_I;
+                    state_zero.offset_T_L_I = kf_output.x_.offset_T_L_I;
+                    
+                    kf_output.change_x(state_zero);
                     kf_output.change_P(P_init_output);
                 }
+
+                // ========== 标志位全复位，等价于首次启动 ==========
                 flg_first_scan = true;
                 is_first_frame = true;
                 flg_reset = false;
                 init_map = false;
-                
+
+                // 时间变量复位
+                first_lidar_time = 0.0;
+                time_current = 0.0;
+                time_update_last = 0.0;
+                time_predict_last_const = 0.0;
+                t_last = 0.0;
+                last_publish_time = 0.0;
+                // 地图与可视化缓存清空
                 {
                     ivox_.reset(new IVoxType(ivox_options_));
                 }
-                sensor_msgs::PointCloud2 laserCloudmsg;
-                Ten::_LASERMAPPING_FLAG_.set_flag(false);
                 global_cloud_downsampled->clear();
-                // pcl::toROSMsg(*global_cloud_downsampled, laserCloudmsg);
-                // Ten::_Map_GET_.push(laserCloudmsg);
+                path.poses.clear();  // 清空历史路径
+                Ten::_LASERMAPPING_FLAG_.set_flag(false);
+                Ten::_TF_GET_.clear();
             }
+
 
             if (flg_first_scan)
             {

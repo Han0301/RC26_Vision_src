@@ -10,28 +10,19 @@
 #include "./../method_math.h"
 
 namespace Ten {
-// 全局常量：单位转换系数（g → m/s²）
+// 仅保留重力单位转换常量
 constexpr double G_TO_MPS2 = 9.81;
-// 自适应阈值：加速度变化率超过此值判定为剧烈运动
-constexpr double DYNAMIC_THRESHOLD = 2.0; // m/s³（增大，避免过度平滑）
-// 最大平滑系数：慢运动时的最大平滑程度
-constexpr double MAX_SMOOTH_ALPHA = 0.15; // 减小，提高响应速度
-// 最小阻尼系数：剧烈运动时的最小阻尼
-constexpr double MIN_DAMPING = 0.99; // 增大，减少漂移
-// 静止判定阈值：加速度方差小于此值判定为静止
-constexpr double STATIC_ACC_VAR_THRESHOLD = 0.005; // g²
 
 struct Quaternion {
     double w, x, y, z;
     Quaternion() : w(1), x(0), y(0), z(0) {}
     Quaternion(double w_, double x_, double y_, double z_) : w(w_), x(x_), y(y_), z(z_) {}
-    // ✅ 修复：补回四元数逆函数（解决编译报错）
     Quaternion inverse() const {
         return Quaternion(w, -x, -y, -z);
     }
 };
 
-// 四元数乘法（标准）
+// 四元数乘法（标准哈密顿积）
 inline Quaternion operator*(const Quaternion& q1, const Quaternion& q2) {
     Quaternion res;
     res.w = q1.w*q2.w - q1.x*q2.x - q1.y*q2.y - q1.z*q2.z;
@@ -41,14 +32,14 @@ inline Quaternion operator*(const Quaternion& q1, const Quaternion& q2) {
     return res;
 }
 
-// 四元数归一化（标准）
+// 四元数归一化
 inline Quaternion normalize(const Quaternion& q) {
     double norm = sqrt(q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z);
     if(norm < 1e-8) return Quaternion(1,0,0,0);
     return Quaternion(q.w/norm, q.x/norm, q.y/norm, q.z/norm);
 }
 
-// 四元数指数映射（精确姿态更新）
+// 四元数指数映射：角速度增量 → 姿态增量四元数
 inline Quaternion quatExponentialMap(const XYZ& omega, double dt) {
     double theta = sqrt(omega._x*omega._x + omega._y*omega._y + omega._z*omega._z) * dt;
     if (theta < 1e-6) {
@@ -64,7 +55,7 @@ inline Quaternion quatExponentialMap(const XYZ& omega, double dt) {
     );
 }
 
-// 用四元数旋转向量（优化实现）
+// 四元数旋转三维向量
 inline XYZ rotateVectorByQuat(const XYZ& v, const Quaternion& q) {
     double qv_x = q.y*v._z - q.z*v._y;
     double qv_y = q.z*v._x - q.x*v._z;
@@ -77,7 +68,7 @@ inline XYZ rotateVectorByQuat(const XYZ& v, const Quaternion& q) {
     return res;
 }
 
-// 四元数转RPY（标准Z-Y-X顺序）
+// 四元数转RPY（Z-Y-X内旋顺序，对应横滚-俯仰-偏航）
 inline RPY quatToRpy(const Quaternion& q) {
     RPY rpy;
     double w = q.w, x = q.x, y = q.y, z = q.z;
@@ -92,7 +83,7 @@ inline RPY quatToRpy(const Quaternion& q) {
 class ImuOdometry
 {
 public:
-    // 所有参数完全不变，默认值一个没改
+    // 构造函数参数完全兼容原接口，默认值不变
     ImuOdometry(size_t max_queue = 20,
                 const XYZ& gravity = XYZ{0.0, 0.0, -1.0}, // 单位：g
                 double ang_deadzone = 0.01, // 单位：rad/s
@@ -106,18 +97,18 @@ public:
           vel_damping_(0.999),
           acc_scale_factor_(1.0),
           enable_centripetal_compensation_(false),
-          enable_coriolis_compensation_(true),
           imu_offset_(XYZ{0.011, 0.02329, -0.04412}),
-          base_quat_(Quaternion())
+          base_quat_(Quaternion()),
+          base_quat_initialized_(false)
     {}
 
-    // 原有接口全部保留，签名完全不变
+    // 接口完全不变：添加IMU数据到队列
     void addImuData(const sensor_msgs::Imu& imu_msg) {
         imu_queue_.push(imu_msg);
         while (imu_queue_.size() > max_queue_size_) imu_queue_.pop();
     }
 
-    // ✅ 零延迟滑动窗口积分：每次调用都积分最新的完整窗口
+    // 接口完全不变：积分最新窗口内IMU，输出相对位姿
     XYZRPY processImu(const XYZ& initial_vel, const RPY& base_rpy = RPY()) {
         if (imu_queue_.empty()) {
             XYZRPY res;
@@ -125,18 +116,17 @@ public:
             res._rpy._roll = 0; res._rpy._pitch = 0; res._rpy._yaw = 0;
             return res;
         }
-
-        // ✅ 核心修复：仅在静止时更新base_quat_，运动时保持不变
-        updateBaseQuatIfStatic();
-
         return integrateFullWindow(initial_vel);
     }
 
+    // 接口不变：重置队列，同时重置初始对准状态
     void resetQueue() {
         std::queue<sensor_msgs::Imu> empty_q;
         std::swap(imu_queue_, empty_q);
+        base_quat_initialized_ = false;
     }
 
+    // 以下参数设置接口全部保留，签名不变
     void setMaxQueueSize(size_t size) { max_queue_size_ = size; }
     void setWorldGravity(const XYZ& gravity) { gravity_world_ = gravity; }
     void setAngularVelDeadzone(double threshold) { angular_vel_deadzone_ = std::fabs(threshold); }
@@ -148,9 +138,12 @@ public:
     void setImuOffset(const XYZ& offset) { imu_offset_ = offset; }
     void setAccScaleFactor(double factor) { acc_scale_factor_ = factor; }
     void enableCentripetalCompensation(bool enable) { enable_centripetal_compensation_ = enable; }
-    void enableCoriolisCompensation(bool enable) { enable_coriolis_compensation_ = enable; }
+    
+    // 保留接口兼容，功能已移除（原因见下文说明）
+    void enableCoriolisCompensation(bool enable) { (void)enable; }
 
 private:
+    // 三维向量叉乘
     XYZ crossProduct(const XYZ& v1, const XYZ& v2) const {
         XYZ res;
         res._x = v1._y * v2._z - v1._z * v2._y;
@@ -159,7 +152,7 @@ private:
         return res;
     }
 
-    // 平滑死区函数
+    // 软死区函数：平滑过渡，无阶跃跳变，抑制零偏小信号
     void applyDeadzone(XYZ& vec, double threshold) const {
         auto smooth_soft = [th = threshold](double v) -> double {
             double absv = fabs(v);
@@ -174,24 +167,17 @@ private:
         vec._z = smooth_soft(vec._z);
     }
 
+    // 重力对准：用加速度计计算初始姿态（仅俯仰+横滚，航向初始为0）
     Quaternion alignGravity(const XYZ& imu_acc) const {
         XYZ a = imu_acc;
         double acc_norm = sqrt(a._x*a._x + a._y*a._y + a._z*a._z);
         
         if (acc_norm < 1e-6) return Quaternion();
+        a._x /= acc_norm; a._y /= acc_norm; a._z /= acc_norm;
 
-        a._x /= acc_norm;
-        a._y /= acc_norm;
-        a._z /= acc_norm;
-
-        XYZ world_up;
-        world_up._x = 0.0;
-        world_up._y = 0.0;
-        world_up._z = 1.0;
-
+        XYZ world_up = {0.0, 0.0, 1.0};
         XYZ axis = crossProduct(a, world_up);
         double axis_norm = sqrt(axis._x*axis._x + axis._y*axis._y + axis._z*axis._z);
-
         if (axis_norm < 1e-6) return Quaternion();
 
         double dot_product = a._x*world_up._x + a._y*world_up._y + a._z*world_up._z;
@@ -200,9 +186,7 @@ private:
 
         double half_angle = angle * 0.5;
         double sin_half = sin(half_angle);
-        axis._x /= axis_norm;
-        axis._y /= axis_norm;
-        axis._z /= axis_norm;
+        axis._x /= axis_norm; axis._y /= axis_norm; axis._z /= axis_norm;
 
         return Quaternion(
             cos(half_angle),
@@ -212,70 +196,21 @@ private:
         );
     }
 
-    // ✅ 核心修复：静止检测+自适应base_quat_更新
-    void updateBaseQuatIfStatic() {
-        // 计算当前窗口前5帧的加速度方差
-        std::queue<sensor_msgs::Imu> temp_q = imu_queue_;
-        std::vector<XYZ> accs;
-        int count = 0;
-        
-        while (!temp_q.empty() && count < 5) {
-            const auto& imu = temp_q.front();
-            accs.push_back(XYZ{imu.linear_acceleration.x, 
-                              imu.linear_acceleration.y, 
-                              imu.linear_acceleration.z});
-            count++;
-            temp_q.pop();
-        }
-        
-        if (count < 5) return;
-
-        // 计算平均加速度
-        XYZ avg_acc;
-        for (const auto& acc : accs) {
-            avg_acc._x += acc._x;
-            avg_acc._y += acc._y;
-            avg_acc._z += acc._z;
-        }
-        avg_acc._x /= count;
-        avg_acc._y /= count;
-        avg_acc._z /= count;
-
-        // 计算加速度方差
-        double var = 0.0;
-        for (const auto& acc : accs) {
-            var += (acc._x - avg_acc._x)*(acc._x - avg_acc._x);
-            var += (acc._y - avg_acc._y)*(acc._y - avg_acc._y);
-            var += (acc._z - avg_acc._z)*(acc._z - avg_acc._z);
-        }
-        var /= (3 * count);
-
-        // 只有在静止时才更新base_quat_
-        if (var < STATIC_ACC_VAR_THRESHOLD) {
-            base_quat_ = alignGravity(avg_acc);
-            ROS_DEBUG("静止状态，更新重力对齐");
-        }
-    }
-
-    // ✅ 零延迟全窗口积分：每次都积分最新的完整20帧
+    // 核心：全窗口中值积分（工业级标准二阶精度实现）
     XYZRPY integrateFullWindow(const XYZ& initial_vel)
     {
-        // 积分状态（世界坐标系下）
+        // 世界坐标系下的积分状态
         XYZ pos = {0, 0, 0};
         XYZ vel = initial_vel;
         Quaternion quat = base_quat_;
         
-        // 存储上一帧数据用于RK4积分
-        XYZ prev_acc_world = {0, 0, 0};
+        // 上一帧数据缓存
         XYZ prev_omega_body = {0, 0, 0};
+        XYZ prev_acc_body = {0, 0, 0};
         double last_ts = 0.0;
-        double total_dt = 0.0;
         bool first_frame = true;
         
         std::queue<sensor_msgs::Imu> temp_q = imu_queue_;
-        double max_acc_dot = 0.0;
-        double max_vel_dot = 0.0;
-        XYZ prev_vel = initial_vel;
 
         while (!temp_q.empty())
         {
@@ -283,23 +218,47 @@ private:
             temp_q.pop();
             const double curr_ts = imu.header.stamp.toSec();
             
-            if (last_ts == 0.0) { 
+            // 第一帧处理：初始对准 + 缓存数据
+            if (first_frame) { 
                 last_ts = curr_ts; 
+                // 首次积分自动完成重力初始对准，之后基准姿态固定
+                if (!base_quat_initialized_) {
+                    XYZ init_acc = {imu.linear_acceleration.x, 
+                                    imu.linear_acceleration.y, 
+                                    imu.linear_acceleration.z};
+                    base_quat_ = alignGravity(init_acc);
+                    quat = base_quat_;
+                    base_quat_initialized_ = true;
+                }
+
+                // 缓存角速度（死区后）
                 prev_omega_body._x = imu.angular_velocity.x;
                 prev_omega_body._y = imu.angular_velocity.y;
                 prev_omega_body._z = imu.angular_velocity.z;
                 applyDeadzone(prev_omega_body, angular_vel_deadzone_);
+
+                // 缓存加速度（死区后转m/s²）
+                XYZ acc_raw = {imu.linear_acceleration.x, 
+                               imu.linear_acceleration.y, 
+                               imu.linear_acceleration.z};
+                applyDeadzone(acc_raw, linear_acc_deadzone_);
+                prev_acc_body._x = acc_raw._x * G_TO_MPS2 * acc_scale_factor_;
+                prev_acc_body._y = acc_raw._y * G_TO_MPS2 * acc_scale_factor_;
+                prev_acc_body._z = acc_raw._z * G_TO_MPS2 * acc_scale_factor_;
+
+                first_frame = false;
                 continue; 
             }
             
+            // 时间差计算与限幅
             double dt = curr_ts - last_ts;
             dt = std::max(1e-6, std::min(dt, 0.01));
-            total_dt += dt;
 
-            // 1. 姿态更新（指数映射）
+            // ========== 1. 姿态更新：中值角速度 + 指数映射 ==========
             XYZ omega_body = {imu.angular_velocity.x, imu.angular_velocity.y, imu.angular_velocity.z};
             applyDeadzone(omega_body, angular_vel_deadzone_);
             
+            // 前后帧角速度取平均（二阶中值积分）
             XYZ avg_omega;
             avg_omega._x = (prev_omega_body._x + omega_body._x) * 0.5;
             avg_omega._y = (prev_omega_body._y + omega_body._y) * 0.5;
@@ -308,111 +267,74 @@ private:
             Quaternion dq = quatExponentialMap(avg_omega, dt);
             quat = normalize(quat * dq);
 
-            // 2. 加速度转换到世界坐标系
-            XYZ acc_body = {imu.linear_acceleration.x, imu.linear_acceleration.y, imu.linear_acceleration.z};
-            applyDeadzone(acc_body, linear_acc_deadzone_);
-            acc_body._x *= G_TO_MPS2 * acc_scale_factor_;
-            acc_body._y *= G_TO_MPS2 * acc_scale_factor_;
-            acc_body._z *= G_TO_MPS2 * acc_scale_factor_;
+            // ========== 2. 加速度预处理 + 安装偏移补偿 ==========
+            XYZ acc_body_raw = {imu.linear_acceleration.x, imu.linear_acceleration.y, imu.linear_acceleration.z};
+            applyDeadzone(acc_body_raw, linear_acc_deadzone_);
 
-            // 3. 运动学模型补偿（向心+科里奥利）
-            if (enable_centripetal_compensation_ || enable_coriolis_compensation_) {
+            // 单位转换 + 刻度因子
+            XYZ acc_body;
+            acc_body._x = acc_body_raw._x * G_TO_MPS2 * acc_scale_factor_;
+            acc_body._y = acc_body_raw._y * G_TO_MPS2 * acc_scale_factor_;
+            acc_body._z = acc_body_raw._z * G_TO_MPS2 * acc_scale_factor_;
+
+            // 牵连加速度补偿（向心+切向，刚体安装偏移标准补偿）
+            if (enable_centripetal_compensation_) {
+                // 角加速度
+                XYZ alpha_body;
+                alpha_body._x = (omega_body._x - prev_omega_body._x) / dt;
+                alpha_body._y = (omega_body._y - prev_omega_body._y) / dt;
+                alpha_body._z = (omega_body._z - prev_omega_body._z) / dt;
+
+                // 切向加速度 α×r + 向心加速度 ω×(ω×r)
+                XYZ tangential_acc = crossProduct(alpha_body, imu_offset_);
                 XYZ omega_cross_r = crossProduct(avg_omega, imu_offset_);
-                
-                if (enable_centripetal_compensation_) {
-                    XYZ centripetal_acc = crossProduct(avg_omega, omega_cross_r);
-                    acc_body._x -= centripetal_acc._x;
-                    acc_body._y -= centripetal_acc._y;
-                    acc_body._z -= centripetal_acc._z;
-                }
-                
-                if (enable_coriolis_compensation_) {
-                    XYZ coriolis_acc = crossProduct(2.0 * avg_omega, rotateVectorByQuat(vel, quat.inverse()));
-                    acc_body._x -= coriolis_acc._x;
-                    acc_body._y -= coriolis_acc._y;
-                    acc_body._z -= coriolis_acc._z;
-                }
+                XYZ centripetal_acc = crossProduct(avg_omega, omega_cross_r);
+
+                // 从测量值中扣除牵连加速度，得到质心处加速度
+                acc_body._x -= (tangential_acc._x + centripetal_acc._x);
+                acc_body._y -= (tangential_acc._y + centripetal_acc._y);
+                acc_body._z -= (tangential_acc._z + centripetal_acc._z);
             }
 
-            // 4. 转换到世界坐标系并补偿重力
-            XYZ acc_world = rotateVectorByQuat(acc_body, quat);
+            // 前后帧加速度取平均
+            XYZ avg_acc_body;
+            avg_acc_body._x = (prev_acc_body._x + acc_body._x) * 0.5;
+            avg_acc_body._y = (prev_acc_body._y + acc_body._y) * 0.5;
+            avg_acc_body._z = (prev_acc_body._z + acc_body._z) * 0.5;
+
+            // ========== 3. 转世界系 + 重力补偿 ==========
+            XYZ acc_world = rotateVectorByQuat(avg_acc_body, quat);
             acc_world._x += gravity_world_._x * G_TO_MPS2;
             acc_world._y += gravity_world_._y * G_TO_MPS2;
             acc_world._z += gravity_world_._z * G_TO_MPS2;
 
-            // 5. RK4积分速度
-            XYZ k1 = prev_acc_world;
-            XYZ k2;
-            k2._x = (prev_acc_world._x + acc_world._x) * 0.5;
-            k2._y = (prev_acc_world._y + acc_world._y) * 0.5;
-            k2._z = (prev_acc_world._z + acc_world._z) * 0.5;
-            XYZ k3 = k2;
-            XYZ k4 = acc_world;
-            
-            XYZ delta_v;
-            delta_v._x = (k1._x + 2*k2._x + 2*k3._x + k4._x) * dt / 6.0;
-            delta_v._y = (k1._y + 2*k2._y + 2*k3._y + k4._y) * dt / 6.0;
-            delta_v._z = (k1._z + 2*k2._z + 2*k3._z + k4._z) * dt / 6.0;
-            
-            XYZ new_vel = vel + delta_v;
+            // ========== 4. 中值积分速度 ==========
+            XYZ new_vel;
+            new_vel._x = vel._x + acc_world._x * dt;
+            new_vel._y = vel._y + acc_world._y * dt;
+            new_vel._z = vel._z + acc_world._z * dt;
 
-            // 6. RK4积分位置
-            XYZ k1_p = vel;
-            XYZ k2_p;
-            k2_p._x = vel._x + delta_v._x * 0.5;
-            k2_p._y = vel._y + delta_v._y * 0.5;
-            k2_p._z = vel._z + delta_v._z * 0.5;
-            XYZ k3_p = k2_p;
-            XYZ k4_p;
-            k4_p._x = vel._x + delta_v._x;
-            k4_p._y = vel._y + delta_v._y;
-            k4_p._z = vel._z + delta_v._z;
-            
-            XYZ delta_p;
-            delta_p._x = (k1_p._x + 2*k2_p._x + 2*k3_p._x + k4_p._x) * dt / 6.0;
-            delta_p._y = (k1_p._y + 2*k2_p._y + 2*k3_p._y + k4_p._y) * dt / 6.0;
-            delta_p._z = (k1_p._z + 2*k2_p._z + 2*k3_p._z + k4_p._z) * dt / 6.0;
-            
-            XYZ new_pos = pos + delta_p;
+            // 固定速度阻尼（仅抑制零偏漂移，无自适应）
+            new_vel._x *= vel_damping_;
+            new_vel._y *= vel_damping_;
+            new_vel._z *= vel_damping_;
 
-            // 计算动态参数用于自适应平滑
-            if (!first_frame) {
-                double acc_dot = fabs(acc_world._x - prev_acc_world._x) / dt;
-                acc_dot = std::max(acc_dot, fabs(acc_world._y - prev_acc_world._y) / dt);
-                acc_dot = std::max(acc_dot, fabs(acc_world._z - prev_acc_world._z) / dt);
-                max_acc_dot = std::max(max_acc_dot, acc_dot);
+            // ========== 5. 中值积分位置（平均速度积分，二阶精度） ==========
+            pos._x += (vel._x + new_vel._x) * 0.5 * dt;
+            pos._y += (vel._y + new_vel._y) * 0.5 * dt;
+            pos._z += (vel._z + new_vel._z) * 0.5 * dt;
 
-                double vel_dot = fabs(new_vel._x - prev_vel._x) / dt;
-                vel_dot = std::max(vel_dot, fabs(new_vel._y - prev_vel._y) / dt);
-                vel_dot = std::max(vel_dot, fabs(new_vel._z - prev_vel._z) / dt);
-                max_vel_dot = std::max(max_vel_dot, vel_dot);
-            }
-
-            // 更新状态
-            pos = new_pos;
+            // 更新状态与缓存
             vel = new_vel;
-            prev_acc_world = acc_world;
             prev_omega_body = omega_body;
-            prev_vel = vel;
+            prev_acc_body = acc_body;
             last_ts = curr_ts;
-            first_frame = false;
-        }
-
-        // 7. 自适应后处理（仅对最终结果平滑，不影响响应）
-        if (!first_frame) {
-            double smooth_alpha = MAX_SMOOTH_ALPHA * std::max(0.0, 1.0 - max_acc_dot / DYNAMIC_THRESHOLD);
-            double dynamic_damping = vel_damping_;
-            
-            double damping_reduction = 0.009 * std::min(1.0, max_vel_dot / (DYNAMIC_THRESHOLD * 0.5));
-            dynamic_damping = std::max(MIN_DAMPING, vel_damping_ - damping_reduction);
-            
-            vel = vel * dynamic_damping;
         }
 
         // 应用速度死区
         applyDeadzone(vel, velocity_deadzone_);
 
-        // 计算相对姿态
+        // 计算相对初始基准的姿态
         Quaternion rel_quat = base_quat_.inverse() * quat;
 
         XYZRPY relative_pose;
@@ -424,20 +346,19 @@ private:
 private:
     std::queue<sensor_msgs::Imu> imu_queue_;
     size_t max_queue_size_;
-    XYZ gravity_world_; // 单位：g
-    double angular_vel_deadzone_; // 单位：rad/s
+    XYZ gravity_world_;          // 单位：g，世界系重力矢量
+    double angular_vel_deadzone_;// 单位：rad/s
     double linear_acc_deadzone_; // 单位：g
-    double velocity_deadzone_; // 单位：m/s
-    double vel_damping_;
-    double acc_scale_factor_; // 加速度计刻度因子
-    bool enable_centripetal_compensation_; // 向心加速度补偿开关
-    bool enable_coriolis_compensation_; // 科里奥利加速度补偿开关
-    XYZ imu_offset_; // IMU相对于旋转中心的安装偏移(m)
+    double velocity_deadzone_;   // 单位：m/s
+    double vel_damping_;         // 速度阻尼系数（固定值）
+    double acc_scale_factor_;    // 加速度计刻度因子
+    bool enable_centripetal_compensation_; // 牵连加速度补偿开关
+    XYZ imu_offset_;             // IMU安装偏移(m)
     
-    // ✅ 固定base_quat_，仅在静止时更新
-    Quaternion base_quat_;
+    Quaternion base_quat_;       // 初始基准姿态（仅初始对准一次）
+    bool base_quat_initialized_; // 基准姿态初始化标记
 };
 
-}
+} // namespace Ten
 
 #endif
