@@ -8,7 +8,8 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-
+#include <algorithm>
+#include <cmath>
 
 namespace Ten
 {
@@ -16,12 +17,13 @@ namespace Ten
     {
         //检测结果
         struct Detection {
-            double cx_; 
-            double cy_;
-            double w_; 
-            double h_;
-            double conf_;
-            int cls_id_;
+            double cx_ = 0; 
+            double cy_ = 0;
+            double w_ = 0; 
+            double h_ = 0;
+            double conf_ = 0;
+            int cls_id_ = 0;
+            double angle_ = 0; //弧度
         };
 
         //模型
@@ -36,7 +38,7 @@ namespace Ten
         {
             public:
                 //模型推理
-                virtual std::vector<Detection> worker(cv::Mat& img) = 0;
+                virtual std::vector<Detection> worker(cv::Mat img) = 0;
                 //virtual ~yolo() = 0;
             protected:
                 //将opencv图片转化为Tensor类型
@@ -153,6 +155,22 @@ namespace Ten
 
         //     return result;
         // }
+
+        // ==================== 旋转框NMS主函数 ====================
+        /**
+         * @brief OBB-NMS非极大值抑制：过滤旋转框重叠度超过IOU阈值的检测框
+         * @param detections 原始旋转框检测结果
+         * @param iou_thresh IOU阈值（0~1）
+         * @return 过滤后的旋转框结果
+         */
+        std::vector<Detection> nmsFilterOBB(std::vector<Detection>& detections, float iou_thresh);
+
+        /**
+         * @brief 在图像上绘制旋转检测框(OBB)、类别和置信度（适配角度制angle_）
+         * @param image 原始图像
+         * @param detections 检测框集合
+         */
+        bool drawDetections(cv::Mat image, const std::vector<Ten::yolo::Detection>& detections);
 
 
     }

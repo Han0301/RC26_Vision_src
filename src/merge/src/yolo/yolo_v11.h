@@ -74,7 +74,7 @@ namespace Ten
                     float cy_ = cy * (float)orig_h /input_shape_[2];
                     float w_ = w * (float)orig_w /input_shape_[3];
                     float h_ = h * (float)orig_h /input_shape_[2];
-                    result.push_back({cx_, cy_, w_, h_, filter_[0].confidence_, filter_[0].item_});
+                    result.push_back({cx_, cy_, w_, h_, filter_[0].confidence_, filter_[0].item_, 0.0});
                 }
                 detections = nmsFilter(result, iou_);
             }

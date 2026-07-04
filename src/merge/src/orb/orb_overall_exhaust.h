@@ -16,12 +16,14 @@ namespace Ten
                 @brief 初始化函数
                 @param model_path:模型路径 /xxx/xxx/bin
                 @param xpu: cpu or gpu
+                @param box_num: 方块个数
                 @param conf_thres：框置信度
                 @param cls_thres: 类别置信度
                 @param iou: 交并比
             */
-            orb_optimize_exhaust(const std::string model_path, const std::string xpu, float conf_thres = 0.75, float cls_thres = 0.75, float iou = 0)
+            orb_optimize_exhaust(const std::string model_path, const std::string xpu, float conf_thres = 0.75, float cls_thres = 0.75, float iou = 0, int box_num = 8)
             :og_(model_path, xpu, conf_thres, cls_thres, iou)
+            ,box_num_(box_num)
             {
                 place_.resize(12,0);
                 loss_.resize(5,0.0);
@@ -39,7 +41,7 @@ namespace Ten
                     return place_;
                 }
                 std::vector<std::vector<double>> losses;
-                std::vector<std::vector<int>> all_places = generateAllBoxCombinations();
+                std::vector<std::vector<int>> all_places = generateAllBoxCombinations(box_num_);
                 //std::cout<< "all_place_num: " << all_places.size() << std::endl;
                 losses.resize(oees.size());
                 for(size_t i = 0; i < losses.size(); i++)
@@ -139,6 +141,7 @@ namespace Ten
             std::vector<int> place_; //方块摆放顺序
             std::vector<double> loss_; //前5个损失值
             std::vector<orb_exhaust_element> optimize_oees_; //优化过后的rt;
+            int box_num_;
 
             /**
              * @brief 生成由8个1和4个0组成的长度为12的int数组的所有不重复组合
@@ -156,6 +159,40 @@ namespace Ten
                 // 步骤3：生成所有不重复的排列（next_permutation自动跳过重复排列）
                 do {
                     all_combinations.push_back(base_arr); // 将当前排列加入结果
+                } while (std::next_permutation(base_arr.begin(), base_arr.end()));
+
+                return all_combinations;
+            }
+
+            /**
+             * @brief 生成长度为12的int数组所有不重复组合
+             * @param num_ones 数组中1的个数（合法范围：0 ~ 12）
+             * @return std::vector<std::vector<int>> 所有组合的集合，每个子vector长度为12
+             *         包含指定数量的1，剩余为0；参数非法时返回空集合
+             */
+            std::vector<std::vector<int>> generateAllBoxCombinations(int num_ones)
+            {
+                // 固定数组总长度为12
+                constexpr int TOTAL_LENGTH = 12;
+                //std::cout << "num_ones: " << num_ones << std::endl;
+                // 1. 参数合法性校验：1的个数不能为负，也不能超过总长度
+                if (num_ones < 0 || num_ones > TOTAL_LENGTH) {
+                    return {}; // 非法参数直接返回空集合
+                }
+
+                // 2. 计算0的个数
+                const int num_zeros = TOTAL_LENGTH - num_ones;
+
+                // 3. 初始化基础数组：先放所有0，再放所有1
+                std::vector<int> base_arr(num_zeros, 0);
+                base_arr.insert(base_arr.end(), num_ones, 1);
+
+                // 4. 存储所有不重复组合
+                std::vector<std::vector<int>> all_combinations;
+
+                // 5. 生成所有不重复排列（next_permutation 自动处理重复元素）
+                do {
+                    all_combinations.push_back(base_arr);
                 } while (std::next_permutation(base_arr.begin(), base_arr.end()));
 
                 return all_combinations;

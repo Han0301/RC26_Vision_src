@@ -257,7 +257,7 @@ namespace Ten
                 if (valid_losses.empty())
                 {
                     std::cerr << "警告：无有效loss值，返回最大值DBL_MAX\n";
-                    return DBL_MAX;
+                    return DBL_MAX / 5.0;//防止后续运算溢出
                 }
 
                 // 边界条件2：仅1个有效loss值，无噪声可剔除，直接返回该值
@@ -332,7 +332,7 @@ namespace Ten
                 if (valid_losses.empty())
                 {
                     std::cerr << "提示：无有效loss值（所有loss为0或负数），返回最大值DBL_MAX\n";
-                    return DBL_MAX;
+                    return DBL_MAX / 5.0;
                 }
 
                 // 步骤3：计算有效loss的总和（std::accumulate高效累加，初始值为0.0）

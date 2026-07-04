@@ -1,12 +1,21 @@
 #cmake_minimum_required(VERSION 3.0.2)
 cmake_minimum_required(VERSION 2.8.3)
+
+SET(CMAKE_BUILD_TYPE "Debug")
+# # 🔥 强制设置 Release 模式
+# if(NOT CMAKE_BUILD_TYPE)
+#   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+# endif()
+# 🔥 打印确认（编译时能看到）
+message(STATUS "✅ 当前编译模式: ${CMAKE_BUILD_TYPE}")
+
+
 project(merge)
 
 
 
-SET(CMAKE_BUILD_TYPE "Debug")
-# set(CMAKE_BUILD_TYPE "Release")
-# set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -std=c++17")
+
+
 
 ADD_COMPILE_OPTIONS(-std=c++17)
 ADD_COMPILE_OPTIONS(-std=c++17)
@@ -27,8 +36,9 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" )
   message("Processer number:  ${N}")
   if(N GREATER 5)
     add_definitions(-DMP_EN)
-    add_definitions(-DMP_PROC_NUM=4)
-    message("core for MP:  3")
+    #add_definitions(-DMP_PROC_NUM=4)
+    add_definitions(-DMP_PROC_NUM=5)
+    message("core for MP:  5")
   elseif(N GREATER 3)
     math(EXPR PROC_NUM "${N} - 2")
     add_definitions(-DMP_EN)
@@ -100,6 +110,7 @@ find_package(OpenVINO REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 find_package(realsense2)
+find_package(yaml-cpp REQUIRED)
 
 pkg_check_modules(LIBSERIAL REQUIRED libserial)
 ## System dependencies are found with CMake's conventions
@@ -223,6 +234,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${TEASERPP_INCLUDE_DIRS}
   ${realsense2_INCLUDE_DIR}
+  ${YAML_CPP_INCLUDE_DIR}
   ${CERES_INCLUDE_DIRS}   # 新增：Ceres 头文件
 )
 
@@ -324,6 +336,7 @@ endif()
 
 target_sources(merge_node
   PRIVATE
+  src/parameter/parameter.cpp
   src/lidar.cpp
   src/method_math.cpp
   src/openvino.cpp
@@ -405,6 +418,7 @@ target_link_libraries(merge_node
   ${APR_LIBRARIES}
   ${PYTHON_LIBRARIES}
   ${URCU_LIB}
+  ${YAML_CPP_LIBRARIES}
   ${CERES_LIBRARIES}  # 新增：链接 Ceres 库（会自动带上 glog/gflags）
   #${realsense2_LIBRARIES} 
   /usr/lib/x86_64-linux-gnu/librealsense2.so

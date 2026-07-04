@@ -7,9 +7,19 @@
 #include <string>
 #include <mutex>
 #include <unistd.h>
+#include "threadpool.h"
 
 namespace Ten
 {
+
+struct camera_frame
+{
+    cv::Mat bgr_image;
+    cv::Mat depth_image;
+    std::shared_ptr<rs2::depth_frame> raw_depth_frame;
+};
+    
+
 
 class Ten_camera
 {
@@ -33,6 +43,20 @@ public:
     */
     cv::Mat camera_read();
 
+    /** 
+        @brief 读取bgr和depth图片
+        @return 结构体 camera_frame
+    */
+    camera_frame camera_read_depth();
+
+    /**
+        @brief 设置分辨率和帧率
+        @param w: 1920 640
+        @param h: 1080 480
+        @param fps: 帧率
+    */
+    void reset_camera(size_t w, size_t h, size_t fps);
+
     // /**
     //     @brief 高效读取图片
     //     @param int: 无实际意义，用于函数重载
@@ -40,18 +64,74 @@ public:
     // */
 
     // cv::Mat* camera_read(int);
+    /**
+        @brief 设置分辨率和帧率（启用深度和bgr双加载）
+        @param w: 1920 640
+        @param h: 1080 480
+        @param fps: 帧率
+    */
+    void reset_camera_depth(size_t w, size_t h, size_t fps);
+
+    rs2_intrinsics get_color_intrinsics();
 
     ~Ten_camera()
     {
         pipe.stop();
     }
 private:
+
+    /**
+        @brief 设置分辨率和帧率
+        @param w: 1920 640
+        @param h: 1080 480
+        @param fps: 帧率
+        @return bool:设置是否成功
+    */
+   bool reset_camera_once(size_t w, size_t h, size_t fps);
+
+   // /**
+   //     @brief 高效读取图片
+   //     @param int: 无实际意义，用于函数重载
+   //     @return cv::Mat* 外面要delete 对象
+   // */
+
+   // cv::Mat* camera_read(int);
+   /**
+       @brief 设置分辨率和帧率（启用深度和bgr双加载）
+       @param w: 1920 640
+       @param h: 1080 480
+       @param fps: 帧率
+       @return bool:设置是否成功
+   */
+   bool reset_camera_depth_once(size_t w, size_t h, size_t fps);
+
     Ten_camera(size_t w, size_t h, size_t fps)
     {
-        config.enable_stream(RS2_STREAM_COLOR, w, h, RS2_FORMAT_BGR8, fps);
-        pipe.start(config);
-        _w = w;
-        _h = h;
+        try
+        {
+            _w = w;
+            _h = h;
+            _fps = fps;
+            config.enable_stream(RS2_STREAM_COLOR, w, h, RS2_FORMAT_BGR8, fps);
+            pipe.start(config);
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+            while(!reset_camera_once(_w, _h, _fps) && Ten::_TREADPOOL_FLAG_.read_flag())
+            {
+                usleep(100000);
+            }
+        }
+        // 9. 捕获未知异常（终极兜底，绝对防止程序崩溃）
+        catch (...)
+        {
+            std::cerr << "相机接受：未知致命异常" << std::endl;
+            while(!reset_camera_once(_w, _h, _fps) && Ten::_TREADPOOL_FLAG_.read_flag())
+            {
+                usleep(100000);
+            }
+        }
     }
 
     static std::unique_ptr<Ten_camera> create(size_t w = 1920, size_t h = 1080, size_t fps = 30) {
@@ -61,10 +141,13 @@ private:
 
 rs2::pipeline pipe;
 rs2::config config;
+rs2_intrinsics color_intr_;
 std::mutex read_mtx_;
 size_t _w = 0;
 size_t _h = 0;
+size_t _fps = 0;
 static std::once_flag camera_flag_;
+rs2::align align_to_color_{RS2_STREAM_COLOR};
 };
 
 

@@ -3,10 +3,6 @@
 
 #include "super.h"
 #include "./../yolo/yolo_han2.h"
-#define _limit_count_1_ 3
-#define _limit_count_2_ 3
-#define _limit_count_3_ 2
-#define _limit_count_4_ 4
 
 namespace Ten
 {

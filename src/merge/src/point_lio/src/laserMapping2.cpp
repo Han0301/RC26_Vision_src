@@ -15,6 +15,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include "./../../threadpool.h"
+#include "../../parameter/parameter.h"
 // #include <cv_bridge/cv_bridge.h>
 // #include "matplotlibcpp.h"
 // #include <ros/console.h>
@@ -202,6 +203,8 @@ void statisticalFilter(const pcl::PointCloud<pcl::PointXYZI>::Ptr& input, pcl::P
 
 pcl::PointCloud<pcl::PointXYZI>::Ptr global_cloud_downsampled(new pcl::PointCloud<pcl::PointXYZI>);
 
+//#define _voxeldownsample_threshold_ 0.3
+
 void publish_frame_world(const ros::Publisher & pubLaserCloudFullRes)
 {
     if (scan_pub_en)
@@ -230,7 +233,7 @@ void publish_frame_world(const ros::Publisher & pubLaserCloudFullRes)
         //*tmp = *global_cloud_downsampled;
         statisticalFilter(laserCloudWorld, first);
         *global_cloud_downsampled += *first;
-        voxelDownSample(global_cloud_downsampled, second, 0.3);
+        voxelDownSample(global_cloud_downsampled, second, Ten::_voxeldownsample_threshold_);
         if(second->size() >= 100000)
         {
             //second->erase(second->begin(), second->begin() + 1000);

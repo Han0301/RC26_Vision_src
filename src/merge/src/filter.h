@@ -1,3 +1,5 @@
+#ifndef __FILTER_H_
+#define __FILTER_H_
 #include <cmath>  // 用于std::abs
 #include "method_math.h"
 
@@ -109,3 +111,5 @@ namespace Ten
         bool _is_initialized;           // 初始化标志（是否有有效的上一次值）
     };
 }
+
+#endif

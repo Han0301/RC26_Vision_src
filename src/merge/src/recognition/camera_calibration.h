@@ -15,7 +15,7 @@
 #include <cstring>
 #include <mutex>
 #include "../method_math.h"
-
+#include "../parameter/parameter.h"
 
 namespace Ten
 {
@@ -31,7 +31,8 @@ public:
     
     Ten_camerainfo()
     {
-        K_ = (cv::Mat_<double>(3,3) <<1380.4350, 0, 974.0183,0,  1385.0788, 541.4301, 0, 0, 1);
+        //K_ = (cv::Mat_<double>(3,3) <<1384.43505859375, 0, 974.018310546875, 0,  1385.07885742188, 541.430114746094, 0, 0, 1);
+        K_ = (cv::Mat_<double>(3,3) <<camera_fx_1080, 0, camera_cx_1080, 0,  camera_fy_1080, camera_cy_1080, 0, 0, 1);
         distCoeffs_ = cv::Mat::zeros(5, 1, CV_64F);
         // 修复：初始化rvec_/tvec_为3x1 CV_64F，避免空矩阵
         rvec_ = cv::Mat::zeros(3, 1, CV_64F);

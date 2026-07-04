@@ -1,0 +1,109 @@
+# ====================== r1 车相对雷达 ======================
+_r1_xyzrpy_car_xyz_x_: -0.40944
+_r1_xyzrpy_car_xyz_y_: 0.45344        # 0.40944 + 0.088/2
+_r1_xyzrpy_car_xyz_z_: 0.0
+_r1_xyzrpy_car_rpy_roll_: 0.0
+_r1_xyzrpy_car_rpy_pitch_: 0.0
+_r1_xyzrpy_car_rpy_yaw_: -1.57079632679   # -PI/2
+
+# ====================== r1 建图误差 ======================
+_r1_xyzrpy_error_xyz_x_: 0.025
+_r1_xyzrpy_error_xyz_y_: -0.045
+_r1_xyzrpy_error_xyz_z_: 0.10
+_r1_xyzrpy_error_rpy_roll_: 0.0
+_r1_xyzrpy_error_rpy_pitch_: 0.0
+_r1_xyzrpy_error_rpy_yaw_: 0.0
+
+
+# ====================== r1 雷达初始误差 ======================
+_r1_xyzrpy_init_error_xyz_x_: 0.0
+_r1_xyzrpy_init_error_xyz_y_: 0.0
+_r1_xyzrpy_init_error_xyz_z_: 0.0
+_r1_xyzrpy_init_error_rpy_roll_: 0.0
+_r1_xyzrpy_init_error_rpy_pitch_: 0.0
+_r1_xyzrpy_init_error_rpy_yaw_: 0.0
+
+
+# ====================== r2 车相对雷达 ======================
+_r2_xyzrpy_car_xyz_x_: -0.126
+_r2_xyzrpy_car_xyz_y_: 0.0
+_r2_xyzrpy_car_xyz_z_: -0.837
+_r2_xyzrpy_car_rpy_roll_: 0.0
+_r2_xyzrpy_car_rpy_pitch_: 0.0
+_r2_xyzrpy_car_rpy_yaw_: 0.0
+
+# ====================== r2 建图误差 ======================
+_r2_xyzrpy_error_xyz_x_: 0.025
+_r2_xyzrpy_error_xyz_y_: -0.045
+_r2_xyzrpy_error_xyz_z_: 0.10
+_r2_xyzrpy_error_rpy_roll_: 0.0
+_r2_xyzrpy_error_rpy_pitch_: 0.0
+_r2_xyzrpy_error_rpy_yaw_: 0.0
+
+
+# ====================== r2 雷达初始误差 ======================
+_r2_xyzrpy_init_error_xyz_x_: 0.0
+_r2_xyzrpy_init_error_xyz_y_: 0.0
+_r2_xyzrpy_init_error_xyz_z_: 0.0
+_r2_xyzrpy_init_error_rpy_roll_: 0.0
+_r2_xyzrpy_init_error_rpy_pitch_: 0.0
+_r2_xyzrpy_init_error_rpy_yaw_: 0.0
+
+
+# ====================== 识别路径 / 检测 ======================
+_coner_path_: "/home/robocon/rc2026/model/corner5/best"
+_juanzhou_path_: "/home/robocon/rc2026/model/juanZhou_cls1/best"
+_box_num_: 5
+
+# ====================== 识别路径2 / 检测 ======================
+_roi12_path_: "/home/h/下载/yolo11s_roi12_atten_17/yolo11s_roi12_atten_17" 
+_limit_count_1_: 3
+_limit_count_2_: 3
+_limit_count_3_: 2
+_limit_count_4_: 4
+
+# ====================== 串口 ======================
+_max_serial_num_: 10
+
+# ====================== 重定位参数 ======================
+_voxeldownsample_threshold_for_teaser_: 0.3
+_voxeldownsample_threshold_for_icp_: 0.5
+_setmaxcorrespondencedistance_nano_gicp_: 0.55
+_min_num_of_point_cloud_for_relocation_: 20000
+
+#=============建图下采样参数===================
+_voxeldownsample_threshold_: 0.3
+
+# ====================== 相机内参（新加 8 个） ======================
+# 640x480
+camera_fx_640: 553.7294
+camera_fy_640: 553.7891
+camera_cx_640: 317.2345
+camera_cy_640: 239.7654
+
+# 1920x1080
+camera_fx_1080: 1384.4351
+camera_fy_1080: 1385.0789
+camera_cx_1080: 960.1845
+camera_cy_1080: 540.2312
+
+# ====================== 雷达到相机外参矩阵 (4x4 变换矩阵) ======================
+lidar_to_camera_00: -0.0293067
+lidar_to_camera_01: -0.999359
+lidar_to_camera_02: -0.0205564
+lidar_to_camera_03: 0.0519757
+lidar_to_camera_10: 0.0195515
+lidar_to_camera_11: 0.0199882
+lidar_to_camera_12: -0.999609
+lidar_to_camera_13: 0.47424
+lidar_to_camera_20: 0.999379
+lidar_to_camera_21: -0.0296971
+lidar_to_camera_22: 0.0189532
+lidar_to_camera_23: 0.336381
+lidar_to_camera_30: 0.0
+lidar_to_camera_31: 0.0
+lidar_to_camera_32: 0.0
+lidar_to_camera_33: 1.0
+
+
+

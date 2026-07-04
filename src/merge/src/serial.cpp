@@ -194,66 +194,144 @@ namespace Ten
 
     std::once_flag Ten_serial::serial_flag_;
 
+    // size_t Ten_serial::serial_send(void* p, uint8_t frame_id, uint8_t length)
+    // {
+    //     std::lock_guard<std::mutex> lock(send_mtx_);
+    //     if(this == nullptr)
+    //     {
+    //         return 0;
+    //     }
+    //     // 构建数据帧：帧头+ID+数据长度+数据+CRC+帧尾
+    //     uint8_t buff_msg[length + 6] = {0};
+    //     buff_msg[0] = FRAME_HEAD_0;
+    //     buff_msg[1] = FRAME_HEAD_1;
+    //     buff_msg[2] = frame_id;
+    //     buff_msg[3] = length;
+    //     uint8_t* ps = (uint8_t*)p;
+    //     for (int q = 0; q < length; q++)
+    //     {
+    //         buff_msg[4 + q] = ps[q];
+    //     }
+    //     //异或校验
+    //     buff_msg[4 + length] = calculateXORcheck(&buff_msg[4], length);
+    //     buff_msg[5 + length] = FRAME_END_0;
+    //     size_t write_num = serial_.write(buff_msg, length + 6);
+    //     return write_num;
+    // }
+
+    
+
     size_t Ten_serial::serial_send(void* p, uint8_t frame_id, uint8_t length)
     {
+        // 1. 互斥锁（线程安全，保留）
         std::lock_guard<std::mutex> lock(send_mtx_);
-        if(this == nullptr)
+        // 2. 关键参数合法性校验（防止野指针/空帧）
+        if (this == nullptr || p == 0)
         {
+            std::cerr << "发送失败：参数为空/数据长度为0" << std::endl;
             return 0;
         }
-        // 构建数据帧：帧头+ID+数据长度+数据+CRC+帧尾
-        uint8_t buff_msg[length + 6] = {0};
-        buff_msg[0] = FRAME_HEAD_0;
-        buff_msg[1] = FRAME_HEAD_1;
-        buff_msg[2] = frame_id;
-        buff_msg[3] = length;
-        uint8_t* ps = (uint8_t*)p;
-        for (int q = 0; q < length; q++)
+
+        try
         {
-            buff_msg[4 + q] = ps[q];
+            // 3. 替换不安全栈数组 → 标准C++ 安全动态缓冲区
+            size_t frame_total_len = length + 6; // 帧总长度：6字节固定头+尾+校验 + 数据
+            std::vector<uint8_t> buff_msg(frame_total_len, 0);
+
+            // 4. 构建帧头
+            buff_msg[0] = FRAME_HEAD_0;
+            buff_msg[1] = FRAME_HEAD_1;
+            buff_msg[2] = frame_id;
+            buff_msg[3] = length;
+
+            // 5. 拷贝数据
+            uint8_t* ps = static_cast<uint8_t*>(p);
+            for (int q = 0; q < length; q++)
+            {
+                buff_msg[4 + q] = ps[q];
+            }
+
+            // 6. 异或校验（保留你的逻辑）
+            buff_msg[4 + length] = calculateXORcheck(&buff_msg[4], length);
+            buff_msg[5 + length] = FRAME_END_0;
+
+            // 7. 串口发送（核心：异常捕获区）
+            size_t write_num = serial_.write(buff_msg.data(), frame_total_len);
+            return write_num;
         }
-        //异或校验
-        buff_msg[4 + length] = calculateXORcheck(&buff_msg[4], length);
-        buff_msg[5 + length] = FRAME_END_0;
-        size_t write_num = serial_.write(buff_msg, length + 6);
-        return write_num;
+        // 8. 捕获所有标准异常（串口断开、硬件错误、内存异常等）
+        catch (const std::exception& e)
+        {
+            // 打印错误日志，方便定位问题
+            std::cerr << "串口发送异常：" << e.what() 
+                    << "（可能是串口已断开/硬件故障）" << std::endl;
+            init_serial();
+            return 0; // 异常时返回0，程序不崩溃
+        }
+        // 9. 捕获未知异常（终极兜底，绝对防止程序崩溃）
+        catch (...)
+        {
+            std::cerr << "串口发送：未知致命异常" << std::endl;
+            init_serial();
+            return 0;
+        }
     }
+
 
     bool Ten_serial::serial_read(void* p, uint8_t& received_frame_id, uint8_t& received_length) {
         std::lock_guard<std::mutex> lock(read_mtx_);
-        if(this == nullptr)
+        if(this == nullptr || p == nullptr)
         {
             return false;
         }
-        uint8_t byte;//声明临时变量存储当前读取的字节
-        //uint8_t* buff_msg = new uint8_t[128]{0};
-        uint8_t* buff_msg = (uint8_t*)p;
-        //循环处理串口缓冲区中的所有可用数据
-        while (serial_.available() > 0) {
-            //ros::Rate rate(1000);
-            if (serial_.read(&byte, 1) != 1) continue;
-            if (byte == FRAME_HEAD_0) {
-                if (serial_.read(&byte, 1) != 1 || byte != FRAME_HEAD_1) continue;
-                if (serial_.read(&received_frame_id, 1) != 1) continue;
-                uint8_t data_length;
-                if (serial_.read(&data_length, 1) != 1) continue;
-                if(data_length > 128)
-                {
-                    std::cout<<"data Too long"<<std::endl;
-                    continue;
+
+        try
+        {
+            uint8_t byte;//声明临时变量存储当前读取的字节
+            //uint8_t* buff_msg = new uint8_t[128]{0};
+            uint8_t* buff_msg = (uint8_t*)p;
+            //循环处理串口缓冲区中的所有可用数据
+            while (serial_.available() > 0) {
+                //ros::Rate rate(1000);
+                if (serial_.read(&byte, 1) != 1) continue;
+                if (byte == FRAME_HEAD_0) {
+                    if (serial_.read(&byte, 1) != 1 || byte != FRAME_HEAD_1) continue;
+                    if (serial_.read(&received_frame_id, 1) != 1) continue;
+                    uint8_t data_length;
+                    if (serial_.read(&data_length, 1) != 1) continue;
+                    if(data_length > 128)
+                    {
+                        std::cout<<"data Too long"<<std::endl;
+                        continue;
+                    }
+                    received_length = data_length;
+                    if (serial_.read(buff_msg, received_length) != received_length) continue;
+                    uint8_t end_bytes[2];
+                    if (serial_.read(&end_bytes[0], 1) != 1 || calculateXORcheck(buff_msg, received_length) != end_bytes[0]) continue;
+                    if (serial_.read(&end_bytes[1], 1) != 1 || end_bytes[1] != FRAME_END_0) continue;
+                    //p = buff_msg;
+                    //rate.sleep(); // 休眠至满足100Hz频率
+                    usleep(10000);
+                    return true;
                 }
-                received_length = data_length;
-                if (serial_.read(buff_msg, received_length) != received_length) continue;
-                uint8_t end_bytes[2];
-                if (serial_.read(&end_bytes[0], 1) != 1 || calculateXORcheck(buff_msg, received_length) != end_bytes[0]) continue;
-                if (serial_.read(&end_bytes[1], 1) != 1 || end_bytes[1] != FRAME_END_0) continue;
-                //p = buff_msg;
-                //rate.sleep(); // 休眠至满足100Hz频率
-                usleep(1000);
-                return true;
             }
+            return false;
         }
-        return false;
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+            init_serial();
+            return false;
+        }
+        // 9. 捕获未知异常（终极兜底，绝对防止程序崩溃）
+        catch (...)
+        {
+            std::cerr << "串口接受：未知致命异常" << std::endl;
+            init_serial();
+            return false;
+        }
+        
+        
     }
 
     Ten_serial& Ten_serial::GetInstance(const std::string& port, const size_t& serial_baud)
@@ -267,41 +345,62 @@ namespace Ten
             ten_serial = create(port, serial_baud);
             std::cout << "init_serial" << std::endl;
         });
-        if(!ten_serial->serial_.isOpen())
-        {
-            std::cout<<"ten_serial->serial_ is no open!"<<std::endl;
-            exit(-1);
-        }
+        // if(!ten_serial->serial_.isOpen())
+        // {
+        //     std::cout<<"ten_serial->serial_ is no open!"<<std::endl;
+        //     exit(-1);
+        // }
         return *ten_serial;
     }
 
     Ten_serial::Ten_serial(const std::string& port, const size_t& serial_baud)//禁止外部初始化实例
     {
-        // 循环检测串口状态，未打开则持续尝试初始化，直到打开成功
-        while (!serial_.isOpen())
+        try
         {
-            // 配置串口设备路径：绑定传入的串口设备文件（如USB转串口设备路径）
-            serial_.setPort(port);
-            // 配置串口波特率：设置与外部设备一致的通信速率（如115200bps）
-            serial_.setBaudrate(serial_baud);
-            // 配置流控制：禁用流控制（无RTS/CTS硬件流控，无XON/XOFF软件流控）
-            serial_.setFlowcontrol(serial::flowcontrol_none);
-            // 配置校验位：禁用奇偶校验（数据传输无校验位，默认配置，显式声明增强可读性）
-            serial_.setParity(serial::parity_none); // default is parity_none
-            // 配置停止位：设置1位停止位（串口通信标准配置，用于标识一个字节传输结束）
-            serial_.setStopbits(serial::stopbits_one);
-            // 配置数据位：设置8位数据位（标准字节长度，支持ASCII码及扩展数据传输）
-            serial_.setBytesize(serial::eightbits);
-            // 创建超时配置对象：使用简单超时模式，设置超时时间为100毫秒
-            // 作用：串口操作（打开、读写）超过100ms未响应则判定为超时，避免无限阻塞
-            serial::Timeout time_out = serial::Timeout::simpleTimeout(100);  
-            // 将超时配置应用到串口对象，使上述超时规则生效
-            serial_.setTimeout(time_out);
-            // 尝试打开串口：根据前面配置的参数初始化串口并建立连接
-            // 若打开失败（如设备占用、路径错误），循环会继续重试
-            serial_.open();
+            // 循环检测串口状态，未打开则持续尝试初始化，直到打开成功
+            while (!serial_.isOpen())
+            {
+                // 配置串口设备路径：绑定传入的串口设备文件（如USB转串口设备路径）
+                serial_.setPort(port);
+                // 配置串口波特率：设置与外部设备一致的通信速率（如115200bps）
+                serial_.setBaudrate(serial_baud);
+                // 配置流控制：禁用流控制（无RTS/CTS硬件流控，无XON/XOFF软件流控）
+                serial_.setFlowcontrol(serial::flowcontrol_none);
+                // 配置校验位：禁用奇偶校验（数据传输无校验位，默认配置，显式声明增强可读性）
+                serial_.setParity(serial::parity_none); // default is parity_none
+                // 配置停止位：设置1位停止位（串口通信标准配置，用于标识一个字节传输结束）
+                serial_.setStopbits(serial::stopbits_one);
+                // 配置数据位：设置8位数据位（标准字节长度，支持ASCII码及扩展数据传输）
+                serial_.setBytesize(serial::eightbits);
+                // 创建超时配置对象：使用简单超时模式，设置超时时间为100毫秒
+                // 作用：串口操作（打开、读写）超过100ms未响应则判定为超时，避免无限阻塞
+                serial::Timeout time_out = serial::Timeout::simpleTimeout(100);  
+                // 将超时配置应用到串口对象，使上述超时规则生效
+                serial_.setTimeout(time_out);
+                // 尝试打开串口：根据前面配置的参数初始化串口并建立连接
+                // 若打开失败（如设备占用、路径错误），循环会继续重试
+                serial_.open();
+            }
+            std::cout<<"serial open!"<<std::endl;
         }
-        std::cout<<"serial open!"<<std::endl;
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+            while(!init_serial() && Ten::_TREADPOOL_FLAG_.read_flag())
+            {
+                usleep(100000);
+            }
+        }
+        // 9. 捕获未知异常（终极兜底，绝对防止程序崩溃）
+        catch (...)
+        {
+            std::cerr << "串口接受：未知致命异常" << std::endl;
+            while(!init_serial() && Ten::_TREADPOOL_FLAG_.read_flag())
+            {
+                usleep(100000);
+            }
+        }
+        
     }
 
     //异或校验
@@ -364,7 +463,72 @@ namespace Ten
         }
     }
 
+    bool Ten_serial::init_serial(const std::string& port, const size_t& serial_baud)
+    {
+        static char number = '0';
+        static int i = 0;
+        try
+        {
+            serial_.close();
+            // 循环检测串口状态，未打开则持续尝试初始化，直到打开成功
+            if(!serial_.isOpen())
+            {
+                std::string ports = port + std::string(1, number + i);
+                std::cout << ports << std::endl;
+                // 配置串口设备路径：绑定传入的串口设备文件（如USB转串口设备路径）
+                serial_.setPort(ports);
+                // 配置串口波特率：设置与外部设备一致的通信速率（如115200bps）
+                serial_.setBaudrate(serial_baud);
+                // 配置流控制：禁用流控制（无RTS/CTS硬件流控，无XON/XOFF软件流控）
+                serial_.setFlowcontrol(serial::flowcontrol_none);
+                // 配置校验位：禁用奇偶校验（数据传输无校验位，默认配置，显式声明增强可读性）
+                serial_.setParity(serial::parity_none); // default is parity_none
+                // 配置停止位：设置1位停止位（串口通信标准配置，用于标识一个字节传输结束）
+                serial_.setStopbits(serial::stopbits_one);
+                // 配置数据位：设置8位数据位（标准字节长度，支持ASCII码及扩展数据传输）
+                serial_.setBytesize(serial::eightbits);
+                // 创建超时配置对象：使用简单超时模式，设置超时时间为100毫秒
+                // 作用：串口操作（打开、读写）超过100ms未响应则判定为超时，避免无限阻塞
+                serial::Timeout time_out = serial::Timeout::simpleTimeout(100);  
+                // 将超时配置应用到串口对象，使上述超时规则生效
+                serial_.setTimeout(time_out);
+                // 尝试打开串口：根据前面配置的参数初始化串口并建立连接
+                // 若打开失败（如设备占用、路径错误），循环会继续重试
+                serial_.open();
+                std::cout << "serial_.open(): " << serial_.isOpen() << std::endl;
+            }
 
+            if(serial_.isOpen())
+            {
+                std::cout<<"serial open!"<<std::endl;
+                return true;
+            }
+            std::cout<<"serial no open!"<<std::endl;
+            return false;
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+            i++;
+            if(i >= _max_serial_num_)
+            {
+                i = 0;
+            }
+            return false;
+        }
+        // 9. 捕获未知异常（终极兜底，绝对防止程序崩溃）
+        catch (...)
+        {
+            std::cerr << "串口接受：未知致命异常" << std::endl;
+            i++;
+            if(i >= _max_serial_num_)
+            {
+                i = 0;
+            }
+            return false;
+        }
+        
+    }
 
 }
 

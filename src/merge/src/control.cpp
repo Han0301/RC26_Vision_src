@@ -11,8 +11,8 @@
 #include "./point_lio/src/laserMapping2.h"
 #include "lidar.h"
 #include "camera.h"
-#include "test.cpp"
-#include "test2.cpp"
+// #include "test.cpp"
+// #include "test2.cpp"
 #include "relocation.h"
 #include "coordinate.h"
 #include "recognition/camera_calibration.h"
@@ -605,6 +605,28 @@ void serial_receiver2()
     }
     urcu_memb_unregister_thread();
 }
+
+void serial_send_test1()
+{
+    urcu_memb_register_thread();
+    Ten::Ten_serial& serial = Ten::Ten_serial::GetInstance();
+    float arr[9] = {0,1,2,3,4,5,6,7,8};
+    ros::Rate sl(1);
+    while(Ten::_TREADPOOL_FLAG_.read_flag())
+    {
+        if(serial.serial_send(arr, 1, sizeof(arr)))
+        {
+            std::cout << "ok" << std::endl;
+        }
+        else
+        {
+            std::cout << "false" << std::endl;
+        }
+        sl.sleep();
+    }
+    urcu_memb_unregister_thread();
+}
+
 
 
 

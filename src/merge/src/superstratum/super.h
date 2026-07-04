@@ -19,11 +19,16 @@
 #include "./../orb/orb_overall_exhaust.h"
 #include "./../method_math.h"
 #include "./../yolo/yolo_v11_cls.h"
+#include "../parameter/parameter.h"
 
 namespace Ten
 {
     namespace superstratum
     {
+        // #define _coner_path_ "/home/robocon/rc2026/model/corner5/best"
+        // #define _juanzhou_path_ "/home/robocon/rc2026/model/juanZhou_cls1/best"
+        // #define _box_num_ 5  //8
+
         class super
         {
         public:
@@ -34,9 +39,8 @@ namespace Ten
             super()
                 :camera_(&Ten::Ten_camera::GetInstance())
                 ,log_(&Ten::Ten_logger::GetInstance(std::string(ROOT_DIR) + std::string("log")))
-                ,orb_determine_position_("/home/h/下载/角点检测5/weights/best_openvino_model/best", "cpu", 0.3, 0.3, 0)
-                ,yolo_detector_("/home/h/下载/卷轴分类1_仿真+现实_32类/best", "cpu", mapping_)
-                ,relocation_base_of_map_(std::string(ROOT_DIR) + std::string("map/map.pcd"))
+                ,orb_determine_position_(_coner_path_, "cpu", 0.3, 0.3, 0, _box_num_)
+                ,yolo_detector_(_juanzhou_path_, "cpu", mapping_)
             {
                 //设置稳态误差
                 Ten::XYZRPY xyzrpy_error;
@@ -48,11 +52,7 @@ namespace Ten
                 xyzrpy_error._rpy._yaw = 0;
                 //coordinate_transformation_.set_stead_state_error(xyzrpy_error);
                 _CAMERA_TRANSFORMATION_.set_error(xyzrpy_error);
-                lidar_to_camera_transform_matrix_ << 
-                -0.0293067,  -0.999359,  -0.0205564,  0.0519757,  
-                0.0195515,  0.0199882,  -0.999609,  0.47424,  
-                0.999379,  -0.0296971,  0.0189532,  0.336381,  
-                0.0         ,  0.0        ,  0.0        ,  1.0; 
+                lidar_to_camera_transform_matrix_ = _lidar_to_camera_transform_matrix_; 
                 _CAMERA_TRANSFORMATION_.camerainfo_.set_Extrinsic_Matrix(lidar_to_camera_transform_matrix_);
            }
 
@@ -62,9 +62,8 @@ namespace Ten
            super(int)
                 :camera_(nullptr)
                 ,log_(&Ten::Ten_logger::GetInstance(std::string(ROOT_DIR) + std::string("log")))
-                ,orb_determine_position_("/home/maple/study2/hou/corner2_v5s_1000_260202/best", "cpu", 0.3, 0.3, 0)
-                ,yolo_detector_("/home/maple/study2/model/best_openvino_model/best", "cpu", mapping_)
-                ,relocation_base_of_map_(std::string(ROOT_DIR) + std::string("map/map.pcd"))
+                ,orb_determine_position_(_coner_path_, "cpu", 0.3, 0.3, 0)
+                ,yolo_detector_(_juanzhou_path_, "cpu", mapping_)
             {
                 //设置稳态误差
                 Ten::XYZRPY xyzrpy_error;
@@ -76,11 +75,7 @@ namespace Ten
                 xyzrpy_error._rpy._yaw = 0;
                 //coordinate_transformation_.set_stead_state_error(xyzrpy_error);
                 _CAMERA_TRANSFORMATION_.set_error(xyzrpy_error);
-                lidar_to_camera_transform_matrix_ << 
-                -0.0293067,  -0.999359,  -0.0205564,  0.0519757,  
-                0.0195515,  0.0199882,  -0.999609,  0.47424,  
-                0.999379,  -0.0296971,  0.0189532,  0.336381,  
-                0.0         ,  0.0        ,  0.0        ,  1.0; 
+                lidar_to_camera_transform_matrix_ = _lidar_to_camera_transform_matrix_; 
                 _CAMERA_TRANSFORMATION_.camerainfo_.set_Extrinsic_Matrix(lidar_to_camera_transform_matrix_);
            }
 
@@ -225,7 +220,7 @@ namespace Ten
                 // }
 
                 //保存原始图像以及rt
-                save_logRT();
+                //save_logRT();
                 //进行orb推理，返回位置以及损失
                 std::vector<int> place = orb_determine_position_.getplace(orb_reasoning_image_);
                 std::cout << "place: ";
@@ -248,7 +243,8 @@ namespace Ten
                     if(place_[i] == 0)
                     {
                         //类别为4
-                        classifier_[i] == 4;
+                        classifier_[i] = 4;
+                        classifier2_[i] = 4;
                     }
                 }
                 return losses[0];
@@ -258,18 +254,18 @@ namespace Ten
              * @brief 检测类别
              * @return std::vector<int>
              */
-            std::vector<int> estimate_classifier()
+            std::vector<int> estimate_classifier(int flag_clear = 0)
             {
                 //优化yolo推理需要用到原生数据的位置姿态
                 std::vector<Ten::ORB::orb_exhaust_element> oprt = orb_determine_position_.get_RT(yolocls_raw_reasoning_image_);
                 //保存原始图像以及优化后的rt
-                log_->record_imageRT(oprt);
+                //log_->record_imageRT(oprt);
                 //调试box位置
-                int debug_exist_box[12] = {0};
-                for(auto& e : debug_exist_box)
-                {
-                    e = 1;
-                }
+                // int debug_exist_box[12] = {0};
+                // for(auto& e : debug_exist_box)
+                // {
+                //     e = 1;
+                // }
 
                 //设置位置控制
                 int exist_box[12] = {0};
@@ -282,20 +278,20 @@ namespace Ten
                 std::cout << std::endl;
                 std::cout << "oprt.size(): " << oprt.size() << std::endl;
 
-                //保存旧数据方便调试
-                for(size_t i = 0; i < yolocls_raw_reasoning_image_.size(); i++)
-                {
-                    //世界点和box_list的类对象，对里面数据进行处理
-                    Ten::init_3d_box world_point;
-                    camera_transformation_.camerainfo_.set_RT(yolocls_raw_reasoning_image_[i].rvec_, yolocls_raw_reasoning_image_[i].tvec_);
-                    camera_transformation_.pcl_transform_world_to_camera(world_point.pcl_LM_plum_object_points_, world_point.pcl_C_plum_object_points_, world_point.object_plum_2d_points_);
-                    world_point.pcl_to_C();
-                    zbuffer_.set_exist_boxes(debug_exist_box);
-                    zbuffer_.set_box_lists_(yolocls_raw_reasoning_image_[i].image_, world_point.C_object_plum_points_, world_point.object_plum_2d_points_, world_point.box_lists_);
-                    log_->record_image(world_point.box_lists_);
-                    //设置yolocls推理的12个roi数据
-                    //yolocls_ripe_roi_reasoning_image_.push_back(world_point);
-                }
+                // //保存旧数据方便调试
+                // for(size_t i = 0; i < yolocls_raw_reasoning_image_.size(); i++)
+                // {
+                //     //世界点和box_list的类对象，对里面数据进行处理
+                //     Ten::init_3d_box world_point;
+                //     camera_transformation_.camerainfo_.set_RT(yolocls_raw_reasoning_image_[i].rvec_, yolocls_raw_reasoning_image_[i].tvec_);
+                //     camera_transformation_.pcl_transform_world_to_camera(world_point.pcl_LM_plum_object_points_, world_point.pcl_C_plum_object_points_, world_point.object_plum_2d_points_);
+                //     world_point.pcl_to_C();
+                //     zbuffer_.set_exist_boxes(debug_exist_box);
+                //     zbuffer_.set_box_lists_(yolocls_raw_reasoning_image_[i].image_, world_point.C_object_plum_points_, world_point.object_plum_2d_points_, world_point.box_lists_);
+                //     log_->record_image(world_point.box_lists_);
+                //     //设置yolocls推理的12个roi数据
+                //     //yolocls_ripe_roi_reasoning_image_.push_back(world_point);
+                // }
 
                 //设置yolocls推理的12个roi数据
                 for(size_t i = 0; i < oprt.size(); i++)
@@ -307,7 +303,7 @@ namespace Ten
                     world_point.pcl_to_C();
                     zbuffer_.set_exist_boxes(exist_box);
                     zbuffer_.set_box_lists_(oprt[i].image_, world_point.C_object_plum_points_, world_point.object_plum_2d_points_, world_point.box_lists_);
-                    log_->record_image(world_point.box_lists_);
+                    //log_->record_image(world_point.box_lists_);
                     //设置yolocls推理的12个roi数据
                     yolocls_ripe_roi_reasoning_image_.push_back(world_point);
                 }
@@ -331,30 +327,81 @@ namespace Ten
                         {
                             //推理
                             std::vector<Ten::yolo::Detection> result = yolo_detector_.worker(box_lists[i].roi_image);
+                            box_lists[i].cls = result[0].cls_id_;
+                            box_lists[i].confidence = result[0].conf_;
+                            //忽略32类
+                            if(box_lists[i].cls == 32)
+                                continue;
+                            //std::cout << "last conf"<< confidence_[i] << std::endl;
+                            //std::cout << "now conf" << result[0].conf_ <<std::endl;
                             if(confidence_[i] < result[0].conf_)
                             {
                                 confidence_[i] = result[0].conf_;
                                 classifier_[i] = result[0].cls_id_;
+                                //std::cout << "result[0].cls_id_: "<< i+1 << " " << result[0].cls_id_ << std::endl;
+                                classifier2_[i] = mapping2_[result[0].cls_id_];
                                 box_lists_save[i].cls = result[0].cls_id_;
                                 box_lists_save[i].confidence = result[0].conf_;
                                 box_lists[i].roi_image.copyTo(box_lists_save[i].roi_image);
                             }
                         }
                     }   
+                    //保存每一轮
+                    //log_->record_image(box_lists);
                 }
                 //保存最佳结果
-                log_->record_image(box_lists_save);
+                //log_->record_image(box_lists_save);
+
+                // //清理数据
+                // orb_reasoning_image_.clear();
+                // yolocls_raw_reasoning_image_.clear();
+                // yolocls_ripe_roi_reasoning_image_.clear();
+
+                if(flag_clear)
+                {
+                    //清空记忆
+                    for(size_t i = 0; i < confidence_.size(); i++)
+                    {
+                        confidence_[i] = 0;
+                    }
+                    //清空记忆
+                    for(size_t i = 0; i < classifier_.size(); i++)
+                    {
+                        classifier_[i] = 0;
+                        classifier2_[i] = 0;
+                    }
+                }
+                return classifier2_;
+            }
+
+            /**
+             * @brief 清理数据
+             */
+            void clear()
+            {
                 //清理数据
                 orb_reasoning_image_.clear();
                 yolocls_raw_reasoning_image_.clear();
-                return classifier_;
+                yolocls_ripe_roi_reasoning_image_.clear();
+                
+            }
+
+
+            /**
+             * 保存图像
+             */
+            void save_log()
+            {
+                log_->record_imageRT(yolocls_raw_reasoning_image_, place_);
             }
 
             /**
              * @brief 普通重定位
              */
-            void use_relocation()
+            static void use_relocation()
             {
+                //重定位处理器，基于点云地图的重定位
+                Ten::Ten_relocation<pcl::PointXYZI> relocation_base_of_map_(std::string(ROOT_DIR) + std::string("map/map.pcd")); 
                 //获得这个世界的坐标系在地图坐标系的x,y,z,roll,pitch,yaw
                 Ten::XYZRPY world2toworld1 = relocation_base_of_map_.get_transformation();
                 _CAMERA_TRANSFORMATION_.set_world2toworld1(world2toworld1);
@@ -363,10 +410,20 @@ namespace Ten
             /**
              * @brief 特殊的重定位
              */
-            void use_relocation2()
+            static void use_relocation2()
             {
+                //重定位处理器，基于点云地图的重定位
+                Ten::Ten_relocation<pcl::PointXYZI> relocation_base_of_map_(std::string(ROOT_DIR) + std::string("map/map.pcd")); 
                 //获得这个世界的坐标系在地图坐标系的x,y,z,roll,pitch,yaw
                 Ten::XYZRPY xyzrpy = relocation_base_of_map_.get_transformation();
+            
+                std::cout << "---------------------------" << std::endl; 
+                std::cout << "x: " << xyzrpy._xyz._x << std::endl;
+                std::cout << "y: " << xyzrpy._xyz._y << std::endl;
+                std::cout << "z: " << xyzrpy._xyz._z << std::endl;
+                std::cout << "roll: " << xyzrpy._rpy._roll << std::endl;
+                std::cout << "pitch: " << xyzrpy._rpy._pitch << std::endl;
+                std::cout << "yaw: " << xyzrpy._rpy._yaw << std::endl;
             
                 Ten::XYZRPY xyzrpy_error;
                 xyzrpy_error._xyz._x = 0.025;
@@ -396,10 +453,10 @@ namespace Ten
              */
             void save_logRT()
             {
-                std::string map_path = std::string(ROOT_DIR) + std::string("path/map.txt");
-                std::vector<int> map = Ten::readNumberFile(map_path);
+                // std::string map_path = std::string(ROOT_DIR) + std::string("path/map.txt");
+                // std::vector<int> map = Ten::readNumberFile(map_path);
                 //log_->record_imageRT(orb_reasoning_image_, map);
-                log_->record_imageRT(yolocls_raw_reasoning_image_, map);
+                log_->record_imageRT(yolocls_raw_reasoning_image_, place_);
             }
 
             /**
@@ -415,7 +472,8 @@ namespace Ten
         private:
         Ten::Ten_camera* camera_; //相机实例的引用
         Ten::Ten_logger* log_; //日志实例的引用
-        std::vector<int> mapping_ = {1, 10, 11, 12, 13, 14, 15, 16, 17,18, 19, 2 ,20 ,21 ,22 ,23 ,24, 25 ,26 ,27 ,28 ,29, 3 ,30, 31, 4 ,5 ,6, 7, 8 ,9}; //yolocls模型类别映射关系
+        std::vector<int> mapping_ = {1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 2, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 3, 30, 31, 32, 4, 5, 6, 7, 8, 9}; //yolocls模型类别映射关系
+        std::vector<int> mapping2_ = {-1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, -1};//映射表
         std::vector<Ten::ORB::orb_exhaust_element> orb_reasoning_image_; //orb推理方块所位置需要用到的要素
         std::vector<Ten::ORB::orb_exhaust_element> yolocls_raw_reasoning_image_; //yolocls推理方块类别所需要用到的原生数据
         std::vector<Ten::init_3d_box> yolocls_ripe_roi_reasoning_image_; //yolocls推理方块类别所需要用到的roi图像
@@ -425,14 +483,12 @@ namespace Ten
         Ten::yolo::yolo_v11_cls yolo_detector_; //yolo处理器，用于判断方块类别
         Ten::Ten_worldtocamera camera_transformation_; //坐标点转换器，用于将世界坐标系下的点变换到当前坐标系，以及像素坐标系
         //Ten::Ten_coordinate coordinate_transformation_; //坐标系转换器，用于得到当前坐标系的相对于世界坐标系的坐标
-        Ten::Ten_relocation<pcl::PointXYZI> relocation_base_of_map_; //重定位处理器，基于点云地图的重定位
         std::vector<int> place_ = {1,1,1,1, 1,1,1,1, 1,1,1,1}; //每个位置是否有方块
-        std::vector<int> classifier_ = {0,0,0,0, 0,0,0,0, 0,0,0,0}; //每个位置对应的类别信息，0：未知 、1：R1 、2：R2 、3：fake 、4：空
-        std::vector<int> confidence_ = {0,0,0,0, 0,0,0,0, 0,0,0,0}; //每个位置对应的置信度
+        std::vector<int> classifier_ = {0,0,0,0, 0,0,0,0, 0,0,0,0}; //每个位置对应的类别信息，1~32
+        std::vector<int> classifier2_ = {0,0,0,0, 0,0,0,0, 0,0,0,0}; //每个位置对应的类别信息，0：未知 、1：R1 、2：R2 、3：fake 、4：空
+        std::vector<double> confidence_ = {0,0,0,0, 0,0,0,0, 0,0,0,0}; //每个位置对应的置信度
         Eigen::Matrix4d lidar_to_camera_transform_matrix_; //雷达到相机的变化矩阵
         };
-
-
     }
 
 

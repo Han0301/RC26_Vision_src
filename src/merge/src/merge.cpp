@@ -1,7 +1,8 @@
 //#include "merge_func.cpp"
-#include "control.cpp"
+// #include "control.cpp"
 #include "vision.cpp"
-
+#include "./superstratum/controlR2.h"
+#include "./superstratum/super2.h"
 
 /**
  * @brief 自定义SIGINT信号处理函数（捕获Ctrl+C）
@@ -118,9 +119,9 @@ void sigintHandler(int sig)
 #else
     int main(int argc, char **argv)
     {
-        if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
-            ros::console::notifyLoggerLevelsChanged();
-        }
+        // if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
+        //     ros::console::notifyLoggerLevelsChanged();
+        // }
 
         //ros::init(argc, argv, "merge_node");
         //关键：NoSigintHandler → 禁用ROS默认的SIGINT处理，改用自定义逻辑
@@ -135,16 +136,20 @@ void sigintHandler(int sig)
         signal(SIGINT, sigintHandler);
 
         std::cout << "🐅: " << "R0" << std::endl;
+        Ten::parameter::loadyaml ly;
         std::string lidar_path = std::string(ROOT_DIR) + std::string("src/livox_ros_driver2/config/MID360_config.json");
         // Ten::Ten_lidar::GetInstance(lidar_path);
-        
         // Ten::ThreadPool pool(2);
-        // pool.enqueue(vision_test_input_lidar);
         // pool.enqueue(test_calibration);
-
+        // pool.enqueue(input_code);
         // laserMapping();
-        vision_test_super1();
-        
+        // vision_test_super2();
+        // test_pnp(nh);
+        //vision_test_relocation2();
+        //serial_send_test1();
+        //publishimg2();
+
+        test_pnp();
         return 0;
     }
 #endif

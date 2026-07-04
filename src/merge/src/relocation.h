@@ -21,7 +21,7 @@
 #include <pcl/registration/icp.h>
 #include "./nano_gicp/include/nano_gicp/point_type_nano_gicp.hpp"
 #include "./nano_gicp/include/nano_gicp/nano_gicp.hpp"
-
+#include "./parameter/parameter.h"
 
 namespace Ten
 {
@@ -29,6 +29,12 @@ namespace Ten
 template<typename PointT>
 class Ten_relocation
 {
+
+    // #define _voxeldownsample_threshold_for_teaser_   0.3  //0.6
+    // #define _voxeldownsample_threshold_for_icp_   0.5  //0.6
+    // #define _setmaxcorrespondencedistance_nano_gicp_  0.55 //0.65
+    // #define _min_num_of_point_cloud_for_relocation_ 20000
+
     //using PointT = pcl::PointXYZINormal;
     using PointCloudT = pcl::PointCloud<PointT>;
     using NormalCloudT = pcl::PointCloud<pcl::Normal>;
@@ -54,6 +60,8 @@ public:
             }
         }
     }
+
+
 
 
     /**
@@ -94,7 +102,7 @@ public:
         typename PointCloudT::Ptr local_cloud;
         sensor_msgs::PointCloud2 map = Ten::_Map_GET_.read_data();
         local_cloud = Ten::sensor_msgs_PointCloud2topcltype<PointCloudT>(map);   
-        if(local_cloud == nullptr || local_cloud->points.size() <= 20000)
+        if(local_cloud == nullptr || local_cloud->points.size() <= _min_num_of_point_cloud_for_relocation_)
         {
             std::cout<< "local_cloud->points.size()" << local_cloud->points.size() << std::endl;
             return Ten::XYZRPY();
@@ -131,7 +139,7 @@ public:
         //Eigen::Matrix4d inverse_transform = transform_matrix_mix.inverse();
 
 
-        Eigen::Matrix4d transform_matrix_raw = process_teaser(global_cloud_, local_cloud_, 0.3);
+        Eigen::Matrix4d transform_matrix_raw = process_teaser(global_cloud_, local_cloud_, _voxeldownsample_threshold_for_teaser_);
         typename PointCloudT::Ptr local_cloud_raw(new PointCloudT);
         pcl::transformPointCloud(*local_cloud, *local_cloud_raw, transform_matrix_raw);
         // Eigen::Matrix4d transform_matrix_raw_2 = process_teaser(global_cloud_, local_cloud_raw, 0.3);
@@ -139,7 +147,7 @@ public:
 
 
         //Eigen::Matrix4d transform_matrix_raw_2 = process_icp(global_cloud_, local_cloud_raw, 0.5);
-        Eigen::Matrix4d transform_matrix_raw_2 = process_nano_gicp(global_cloud_, local_cloud_raw, 0.5);
+        Eigen::Matrix4d transform_matrix_raw_2 = process_nano_gicp(global_cloud_, local_cloud_raw, _voxeldownsample_threshold_for_icp_);
 
 
         Eigen::Matrix4d transform_matrix_mix = transform_matrix_raw_2 * transform_matrix_raw;
@@ -333,7 +341,7 @@ private:
         // 4. 设置ICP默认核心参数（经典默认值，适配多数场景）
         icp.setMaximumIterations(100);                // 最大迭代次数
         icp.setTransformationEpsilon(1e-8);          // 收敛阈值（迭代停止条件）
-        icp.setMaxCorrespondenceDistance(0.55);      // 最大对应点距离阈值（单位：m）
+        icp.setMaxCorrespondenceDistance(_setmaxcorrespondencedistance_nano_gicp_);      // 最大对应点距离阈值（单位：m）
         icp.setEuclideanFitnessEpsilon(1e-6);        // 欧式适应度阈值（拟合精度）
 
         // 5. 执行ICP配准（无需保存配准后点云，仅执行配准计算）
@@ -389,11 +397,12 @@ private:
         nano_gicp.setInputTarget(global_cloud_downsampled);
     
         // 4. 设置参数（保留原有）
-        nano_gicp.setMaximumIterations(200);
-        nano_gicp.setTransformationEpsilon(1e-8);
-        nano_gicp.setMaxCorrespondenceDistance(0.55);
-        nano_gicp.setEuclideanFitnessEpsilon(1e-6);
-        nano_gicp.setCorrespondenceRandomness(20);
+        // 4. 设置配准核心参数
+        nano_gicp.setMaximumIterations(300);            // 配准最大迭代次数，防止算法无限循环
+        nano_gicp.setTransformationEpsilon(1e-8);       // 变换矩阵收敛阈值，矩阵变化小于该值则停止迭代
+        nano_gicp.setMaxCorrespondenceDistance(_setmaxcorrespondencedistance_nano_gicp_);   // 最大匹配点对距离阈值，超出距离的点对不参与配准
+        nano_gicp.setEuclideanFitnessEpsilon(1e-6);     // 欧式拟合误差收敛阈值，适应度变化小于该值则停止迭代
+        nano_gicp.setCorrespondenceRandomness(20);      // 随机采样匹配点数量，用于加速配准计算
     
         // 5. 执行配准（保留原有）
         PointCloudT temp_cloud;

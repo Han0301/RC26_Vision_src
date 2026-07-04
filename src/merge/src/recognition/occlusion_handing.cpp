@@ -260,7 +260,6 @@ void Ten_occlusion_handing::set_box_lists_(
 
 }
 
-
 cv::Mat Ten_occlusion_handing::update_debug_image(
     cv::Mat image,
     const std::vector<cv::Point2f>& object_plum_2d_points_

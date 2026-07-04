@@ -6,8 +6,13 @@
 #include <string>
 #include <mutex>
 #include <unistd.h>
+#include "./parameter/parameter.h"
+#include "threadpool.h"
+
 namespace Ten
 {
+
+//#define _max_serial_num_ 10
 
 //全局只有一个对象
 class Ten_serial
@@ -70,13 +75,15 @@ public:
 private:
     Ten_serial(const std::string& port, const size_t& serial_baud);//禁止外部初始化实例
 
-    static std::unique_ptr<Ten_serial> create(const std::string& port = "/dev/ttyACM0", const size_t& serial_baud = 9600) {
+    static std::unique_ptr<Ten_serial> create(const std::string& port = "/dev/ttyACM0", const size_t& serial_baud = 115200) {
         // 静态函数可访问私有构造函数，直接new对象后封装为unique_ptr
         return std::unique_ptr<Ten_serial>(new Ten_serial(port, serial_baud));
     }
 
     //异或校验
     int calculateXORcheck(const uint8_t* data, size_t length);
+
+    bool init_serial(const std::string& port = "/dev/ttyACM", const size_t& serial_baud = 115200);
 
     
 serial::Serial serial_;

@@ -55,7 +55,7 @@ namespace Ten
         Eigen::Matrix4d getXYZRPY_matrix()
         {
             std::lock_guard<std::mutex> lock(mtx_);
-            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtocurrent_);
+            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtocurrent_- error_);
             Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
             Eigen::Matrix4d T1 = camerainfo_.extrinsic();
             Eigen::Matrix4d mix = T1 * T2 * T3;

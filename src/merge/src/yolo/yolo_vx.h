@@ -39,7 +39,7 @@ namespace Ten
                 @param img: cv::Mat类型三通道图片
                 @return std::vector<Detection>: 检测结果
             */
-            virtual std::vector<Detection> worker(cv::Mat& img) override
+            virtual std::vector<Detection> worker(cv::Mat img) override
             {
                 if(flag_ == 0)
                 {

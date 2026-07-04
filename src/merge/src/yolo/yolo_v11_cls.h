@@ -42,7 +42,7 @@ namespace Ten
                 std::vector<Detection> result;
                 const float* data = output.data<const float>();
                 auto shape = output.get_shape();
-                // std::cout<<"yolo11_cls"<<std::endl;
+                std::cout<<"yolo11_cls"<<std::endl;
                 std::vector<model> filter_;
                 for(int i = 0; i < output_shape_[1]; i++)
                 {
@@ -56,7 +56,7 @@ namespace Ten
    
                 for(size_t i = 0 ; i < topk_; i++)
                 {
-                    detections.push_back({-1, -1, -1, -1, filter_[0].confidence_, map_[filter_[0].item_]});
+                    detections.push_back({-1, -1, -1, -1, filter_[i].confidence_, map_[filter_[i].item_], -1});
                 }
                 return detections;
             }

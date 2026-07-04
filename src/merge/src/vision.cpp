@@ -1,17 +1,18 @@
 #ifndef __VISION_CPP_
 #define __VISION_CPP_
+
+
+
 #include <filesystem> 
-
-
-
 #include "./superstratum/super.h"
-#include "test.cpp"
-#include "test2.cpp"
+#include "./superstratum/super2.h"
+#include "./superstratum/super_post.h"
 #include "./lidar/lidar_recognition.h"
 #include "./lidar/lidar_getttf.h"
-#include "./superstratum/super2.h"
-#include "./yolo/yolo_han2.h"
-#include "./superstratum/super_post.h"
+#include "./calibration/fast_camera_calibration.h"
+#include "./superstratum/controlR2.h"
+#include "./PnP/pnp_main.h"
+
 void orb_test()
 {
     urcu_memb_register_thread();
@@ -233,72 +234,7 @@ void vision_test3()
 }
 
 
-//测试标定代码
-void test_calibration()
-{
-    urcu_memb_register_thread();
-    
-    //用于调试rt转换器
-    
-    //初始化ros调试
-    ros::NodeHandle nh("~");
-    image_transport::ImageTransport it(nh);
-    image_transport::Publisher pub_img = it.advertise("pub_image_topic", 2);
-    //初始化相机
-    Ten::Ten_camera& camera =  Ten::Ten_camera::GetInstance();
-    //设置相机内外参
-    cv::Mat K = (cv::Mat_<double>(3,3) <<
-    1380.4350, 0, 974.0183,
-    0,  1385.0788, 541.4301,
-    0, 0, 1);
-    Eigen::Matrix4d transform_matrix;
-    // transform_matrix << 
-    // -0.0794166,  -0.996838,  -0.00276348,  0.0197102,  
-    // -0.045364,  0.00638342,  -0.99895,  0.36517,  
-    // 0.995809,  -0.0792079,  -0.0457275,  0.511095,  
-    // 0.0         ,  0.0        ,  0.0        ,  1.0;
-    transform_matrix << 
-    -0.0520106,  -0.998646,  0.000310088,  0.0206641,  
-    -0.0471048,  0.00214311,  -0.998888,  0.396765,  
-    0.997535,  -0.0519674,  -0.0471525,  0.50734,  
-    0.0         ,  0.0        ,  0.0        ,  1.0;       
-    // transform_matrix << 
-    // -0.3604660019990012, -0.9327274936662253, -0.01054232405035172, -0.1925323065106992,
-    // -0.0187131608920804, 0.01884208080016441, -0.9996527300479487, 1.276118837278884,
-    // 0.9326554400306272, -0.3601226221014218, -0.02406803574247084, -0.02044681669899173,
-    // 0, 0, 0, 1;
-    Ten::_CAMERA_TRANSFORMATION_.camerainfo_.set_K(K);
-    Ten::_CAMERA_TRANSFORMATION_.camerainfo_.set_Extrinsic_Matrix(transform_matrix);
-    ros::Rate sl(10);
-    size_t debug_num = 0;
-    //zb
-    Ten::init_3d_box world_point;
-    Ten::Ten_occlusion_handing zbuffer;
-    while(Ten::_TREADPOOL_FLAG_.read_flag())
-    {
-        //读取图片
-        cv::Mat image_in = camera.camera_read();
-        Ten::XYZRPY tf = Ten::Nav_Odometrytoxyzrpy(Ten::_TF_GET_.read_data());
-        //设置世界到雷达
-        Ten::_CAMERA_TRANSFORMATION_.set_worldtolidar(tf);
-        Eigen::Matrix4d world_to_camera_test =  Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(world_point.pcl_LM_plum_object_points_, world_point.pcl_C_plum_object_points_, world_point.object_plum_2d_points_);
-        // if(debug_num >= 10)
-        // {
-        //     std::cout << "world_to_camera_test: " << std::endl;
-        //     std::cout << world_to_camera_test << std::endl;
-        //     debug_num = 0;
-        // }
-        debug_num++;
-        world_point.pcl_to_C();
-        zbuffer.set_box_lists_(image_in, world_point.C_object_plum_points_, world_point.object_plum_2d_points_, world_point.box_lists_);
-        cv::Mat debug = zbuffer.update_debug_image(image_in, world_point.object_plum_2d_points_);
-        sensor_msgs::ImagePtr pub_debug_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", debug).toImageMsg();
-        pub_img.publish(pub_debug_img_msg);
-        sl.sleep();
-        
-    }
-    urcu_memb_unregister_thread();
-}
+
 
 
 //视觉代码
@@ -752,15 +688,38 @@ void vision_lidarR1()
     
     urcu_memb_unregister_thread();
 }
+void vision_calibration3()
+{
+    std::string log_path = std::string(ROOT_DIR) + std::string("map/map.pcd");
+    //std::string log_path = std::string("/home/maple/study2/maple/map/map.pcd");
+    Ten::Ten_relocation<pcl::PointXYZI> rel(log_path);
+    Ten::XYZRPY xyzrpy = rel.get_transformation();
+
+    std::cout << "---------------------------" << std::endl; 
+    std::cout << "x: " << xyzrpy._xyz._x << std::endl;
+    std::cout << "y: " << xyzrpy._xyz._y << std::endl;
+    std::cout << "z: " << xyzrpy._xyz._z << std::endl;
+    std::cout << "roll: " << xyzrpy._rpy._roll << std::endl;
+    std::cout << "pitch: " << xyzrpy._rpy._pitch << std::endl;
+    std::cout << "yaw: " << xyzrpy._rpy._yaw << std::endl;
+
+    Ten::XYZRPY xyzrpy_error;
+    xyzrpy_error._xyz._x = 0.025;
+    xyzrpy_error._xyz._y = -0.045;
+    xyzrpy_error._xyz._z = 0.10;
+    xyzrpy_error._rpy._roll = 0;
+    xyzrpy_error._rpy._pitch = 0;
+    xyzrpy_error._rpy._yaw = 0;
+
+    Ten::XYZRPY world_origin = Ten::transform_matrixtoXYZRPY(Ten::worldtocurrent(xyzrpy._xyz, xyzrpy._rpy) * Ten::worldtocurrent(xyzrpy_error._xyz, xyzrpy_error._rpy) * Ten::_COORDINATE_TRANSFORMATION_.get_lidartocar());
+
+    Ten::_COORDINATE_TRANSFORMATION_.set_world2toworld1(world_origin);
+}
 
 void vision_test_input_lidar()
 {
     urcu_memb_register_thread();
-    Ten::superstratum::super sp_controller;
     Ten::lidar::lidar_recogniton lidar_r;
-    Ten::superstratum::supper2 supper2_(true);
-    Ten::superstratum::super_post super_post_;
-
     int input = 0;
     ros::Rate sl(10);
     while(Ten::_TREADPOOL_FLAG_.read_flag())
@@ -776,40 +735,13 @@ void vision_test_input_lidar()
         if(flag == 1)
         {
             std::cout<< "flag == 1" << std::endl;
-            sp_controller.use_relocation2();
+            vision_calibration3();
         }
         else if(input != 0 || flag == 2)
         {
             input = 3;
             lidar_r.get_current_cloud();
             lidar_r.point_cloud_debug();
-        }
-        else if (input != 0 || flag == 3)
-        {
-            std::cout<< "flag == 3" << std::endl;
-            supper2_.set_batch_images();
-        }
-        else if (input != 0 || flag == 4)
-        {
-            std::cout<< "flag == 4" << std::endl;
-            supper2_.set_roi12_place();
-            supper2_.set_cls();
-            super_post_.set_final_result(supper2_.get_classifier_(),supper2_.get_confidence_(), supper2_.get_place(),supper2_.get_per_loss(), true, true);
-            
-            std::vector<std::vector<int>> time_ps_ = supper2_.get_time_ps_();
-            std::cout << "time_ps_: " << std::endl;
-            for (int i = 0; i < time_ps_.size(); i++)
-            {
-                std::cout << "time " << i << " ";
-                for (int j = 0; j < time_ps_[i].size(); j++)
-                {
-                    std::cout << time_ps_[i][j] << ", ";
-                }
-                std::cout << std::endl;
-            }
-            // 调试打印
-            supper2_.print_post_cls();
-
         }
         else if(flag == 0)
         {
@@ -834,8 +766,79 @@ void vision_test_lidar_getttf()
 void vision_test_super1()
 {
     urcu_memb_register_thread();
+    // std::string log_path = std::string(ROOT_DIR) + std::string("log");
+    // Ten::Ten_logger& log = Ten::Ten_logger::GetInstance(log_path);
+    Ten::superstratum::super sp_controller(1);
+    std::vector<std::vector<Ten::ORB::debug_orb_exhaust_element>> datasets = Ten::ORB::load_exhaust_dataset("/home/maple/study3/maple/place_debug/4/test");
+    size_t num = 0;
+    
+    for(size_t i = 0; i < datasets.size() && Ten::_TREADPOOL_FLAG_.read_flag(); i++)
+    {
+        std::vector<Ten::ORB::debug_orb_exhaust_element> batchs = datasets[i];
+        std::vector<int> label;
+        std::vector<int> place;
+        for(size_t j = 0; j < batchs.size(); j++)
+        {
+            // cv::imshow("debug", batchs[j].oee.image_);
+            // cv::waitKey(0);
+            // std::cout << "---------rtl--------" << std::endl;
+            // std::cout << batchs[j].oee.rvec_ << std::endl;
+            // std::cout << batchs[j].oee.tvec_ << std::endl;
+            // for(auto& e : batchs[j].label)
+            // {
+            //     std::cout << e << " ";
+            // }
+            //std::cout << std::endl;
 
-    std::string dataset_path = "/home/h/图片/test_datas_red";
+            //设置第j组图片
+            sp_controller.debug_set_image(batchs[j].oee);
+            label = batchs[j].label;
+        }
+        double loss = sp_controller.estimate_square_position();
+        place = sp_controller.get_place();
+        sp_controller.estimate_classifier();
+        int flag = 0;
+        for(size_t j = 0; j < label.size(); j++)
+        {
+            if(label[j] != place[j])
+            {
+                flag = 1;
+                break;
+            }
+        }
+
+        if(flag)
+        {
+            std::cout << std::endl;
+            std::cout << "-----------" << i+1 << "--------------" << std::endl;
+            std::cout << "loss " << loss << std::endl;
+            std::cout << "label " << std::endl;
+            for(auto& e : place)
+            {
+                std::cout << e << " ";
+            }
+            std::cout << "--------------------------" << std::endl;
+
+            Ten::ORB::save_loss_label_to_json("/home/maple/study3/maple/place_debug/4/error", i+1, place, loss);
+        }
+        else
+        {
+            num++;
+        }
+        Ten::ORB::save_loss_label_to_json("/home/maple/study3/maple/place_debug/4/result", i+1, place, loss);
+    }
+
+    if(datasets.size() != 0)
+        std::cout << "accuracy: " << (float)num / datasets.size() << std::endl;
+    
+    urcu_memb_unregister_thread();
+}
+
+void vision_test_super2()
+{
+    urcu_memb_register_thread();
+
+    std::string dataset_path = Ten::superstratum::_test_datasets_;
     std::vector<std::vector<Ten::ORB::debug_orb_exhaust_element>> datasets = Ten::ORB::load_exhaust_dataset(dataset_path);
     size_t num = 0;
 
@@ -944,6 +947,297 @@ void vision_test_super1()
 }
 
 
+int vision_test_relocation2()
+{
+    std::string global_pcd_path = "/home/maple/study3/maple/map/test_map1/3.pcd";
+    std::string local_pcd_path = "/home/maple/study3/maple/map/test_map1/4.pcd";
+    Ten::Ten_relocation<pcl::PointXYZI> rel("/home/maple/study3/maple/map/test_map1/3.pcd");
+    pcl::PointCloud<pcl::PointXYZI>::Ptr global_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr local_cloud(new pcl::PointCloud<pcl::PointXYZI>); 
+    pcl::io::loadPCDFile<pcl::PointXYZI>(global_pcd_path, *global_cloud);
+    pcl::io::loadPCDFile<pcl::PointXYZI>(local_pcd_path, *local_cloud);
+
+    // Ten::XYZ xyz;
+    // xyz._x = 1 ;
+    // xyz._y = 2 ;
+    // xyz._z = 3 ;
+
+    // Ten::RPY rpy;
+    // rpy._roll = 0.52;
+    // rpy._pitch = 0.52;
+    // rpy._yaw = 0.52;
+
+    // Eigen::Matrix4d T = Ten::worldtocurrent(xyz, rpy);
+    // pcl::transformPointCloud(*global_cloud, *local_cloud, T);
+
+    Ten::XYZRPY xyzrpy = rel.get_transformation(local_cloud);
+
+    std::cout << "---------------------------" << std::endl; 
+    std::cout << "x: " << xyzrpy._xyz._x << std::endl;
+    std::cout << "y: " << xyzrpy._xyz._y << std::endl;
+    std::cout << "z: " << xyzrpy._xyz._z << std::endl;
+    std::cout << "roll: " << xyzrpy._rpy._roll << std::endl;
+    std::cout << "pitch: " << xyzrpy._rpy._pitch << std::endl;
+    std::cout << "yaw: " << xyzrpy._rpy._yaw << std::endl;
+    return 0;
+}
+
+
+void publishimg2()
+{
+    urcu_memb_register_thread();
+    ros::NodeHandle nh("~");
+    image_transport::ImageTransport it(nh);
+    image_transport::Publisher pub_img = it.advertise("pub_image_topic", 2);
+    //初始化相机
+    Ten::Ten_camera& camera =  Ten::Ten_camera::GetInstance();
+    ros::Rate sl(10);
+    while(Ten::_TREADPOOL_FLAG_.read_flag())
+    {
+        //读取图片
+        cv::Mat image_in = camera.camera_read();
+        if(image_in.empty())
+        {
+            continue;
+            sl.sleep();
+        }
+        sensor_msgs::ImagePtr pub_debug_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image_in).toImageMsg();
+        pub_img.publish(pub_debug_img_msg);
+        sl.sleep();
+    }
+    urcu_memb_unregister_thread();
+}
+
+//测试标定代码
+void test_calibration()
+{
+    urcu_memb_register_thread();
+    
+    //用于调试rt转换器
+    
+    //初始化ros调试
+    ros::NodeHandle nh("~");
+    image_transport::ImageTransport it(nh);
+    image_transport::Publisher pub_img = it.advertise("pub_image_topic", 2);
+    //初始化相机
+    Ten::Ten_camera& camera =  Ten::Ten_camera::GetInstance();
+    //设置相机内外参
+    cv::Mat K = (cv::Mat_<double>(3,3) <<
+    1380.4350, 0, 974.0183,
+    0,  1385.0788, 541.4301,
+    0, 0, 1);
+    //Eigen::Matrix4d transform_matrix;
+    // transform_matrix << 
+    // -0.0794166,  -0.996838,  -0.00276348,  0.0197102,  
+    // -0.045364,  0.00638342,  -0.99895,  0.36517,  
+    // 0.995809,  -0.0792079,  -0.0457275,  0.511095,  
+    // 0.0         ,  0.0        ,  0.0        ,  1.0;
+    // transform_matrix << 
+    // -0.0520106,  -0.998646,  0.000310088,  0.0206641,  
+    // -0.0471048,  0.00214311,  -0.998888,  0.396765,  
+    // 0.997535,  -0.0519674,  -0.0471525,  0.50734,  
+    // 0.0         ,  0.0        ,  0.0        ,  1.0;       
+    //Eigen::Matrix4d transform_matrix = Ten::superstratum::_lidar_to_camera_transform_matrix_; 
+
+    Ten::_CAMERA_TRANSFORMATION_.camerainfo_.set_K(K);
+    //Ten::_CAMERA_TRANSFORMATION_.camerainfo_.set_Extrinsic_Matrix(transform_matrix);
+    ros::Rate sl(10);
+    size_t debug_num = 0;
+    //zb
+    Ten::init_3d_box world_point;
+    Ten::Ten_occlusion_handing zbuffer;
+
+    int total_num = 0;
+    while(Ten::_TREADPOOL_FLAG_.read_flag())
+    {
+        //读取图片
+        cv::Mat image_in = camera.camera_read();
+        Ten::XYZRPY tf = Ten::Nav_Odometrytoxyzrpy(Ten::_TF_GET_.read_data());
+
+        //打印tf信息
+        if(total_num > 10)
+        {
+            std::cout << "---------------------------" << std::endl; 
+            std::cout << "x: " << tf._xyz._x << std::endl;
+            std::cout << "y: " << tf._xyz._y << std::endl;
+            std::cout << "z: " << tf._xyz._z << std::endl;
+            std::cout << "roll: " << tf._rpy._roll << std::endl;
+            std::cout << "pitch: " << tf._rpy._pitch << std::endl;
+            std::cout << "yaw: " << tf._rpy._yaw << std::endl;
+            total_num = 0;
+        }
+        total_num++;
+        //设置世界到雷达
+        Ten::_CAMERA_TRANSFORMATION_.set_worldtolidar(tf);
+        Eigen::Matrix4d world_to_camera_test =  Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(world_point.pcl_LM_plum_object_points_, world_point.pcl_C_plum_object_points_, world_point.object_plum_2d_points_);
+        // if(debug_num >= 10)
+        // {
+        //     std::cout << "world_to_camera_test: " << std::endl;
+        //     std::cout << world_to_camera_test << std::endl;
+        //     debug_num = 0;
+        // }
+        debug_num++;
+        world_point.pcl_to_C();
+        zbuffer.set_box_lists_(image_in, world_point.C_object_plum_points_, world_point.object_plum_2d_points_, world_point.box_lists_);
+        cv::Mat debug = zbuffer.update_debug_image(image_in, world_point.object_plum_2d_points_);
+        sensor_msgs::ImagePtr pub_debug_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", debug).toImageMsg();
+        pub_img.publish(pub_debug_img_msg);
+        sl.sleep();
+        
+    }
+    urcu_memb_unregister_thread();
+}
+
+
+void camera_calibration()
+{
+    Ten::camera_calibration::FastCalibration cc;
+    //初始化相机
+    Ten::Ten_camera& camera =  Ten::Ten_camera::GetInstance();
+    int flag = 0;
+    while(Ten::_TREADPOOL_FLAG_.read_flag())
+    {
+       std::cin >> flag;
+       if(flag == 1)
+       {
+            cv::Mat img = camera.camera_read(); 
+            if(img.empty())
+            {
+                img = camera.camera_read();
+                while(img.empty())
+                {
+                    usleep(100*1000);
+                }
+            }
+            //位置变化
+            nav_msgs::Odometry odo = Ten::_TF_GET_.read_data();
+            Ten::XYZRPY pose = Ten::Nav_Odometrytoxyzrpy(odo);
+            Ten::_COORDINATE_TRANSFORMATION_.set_worldtolidar(pose);
+            Eigen::Matrix4d transform_matrix = cc.useFastCalibration(img, Ten::_COORDINATE_TRANSFORMATION_.get_world2tolidar());
+            std::cout << transform_matrix << std::endl;
+            Ten::_CAMERA_TRANSFORMATION_.camerainfo_.set_Extrinsic_Matrix(transform_matrix);
+       }
+       if(flag == 2)
+       {
+            Ten::superstratum::controlR1::calibration2();
+            Ten::superstratum::super::use_relocation2();
+       }
+       else if(flag == 0)
+       {
+            return;
+       }
+    }
+}
+
+
+//视觉代码
+void vision_code2()
+{
+    urcu_memb_register_thread();
+    
+    Ten::superstratum::super vision_controller;
+    Ten::superstratum::supper2 vision_controller2;
+
+    while(Ten::_TREADPOOL_FLAG_.read_flag())
+    {
+        int flag = -1;
+        std::cout << "wait for input" << std::endl;
+        std::cin >> flag;
+        if(flag == 1)
+        {
+            std::cout << "flag: " << flag << std::endl;
+            vision_controller.set_image_for_orb();
+            vision_controller2.set_batch_images();
+        }
+        else if(flag == 2)
+        {
+            std::cout << "flag: "  << flag << std::endl;
+            vision_controller.set_image_for_yolo();
+            vision_controller2.set_batch_images();
+        }
+        else if(flag == 3)
+        {
+            std::cout << "flag: "  << flag << std::endl;
+            double loss = vision_controller.estimate_square_position();
+            std::cout << "loss1: " << loss << std::endl;
+            std::vector<int> cls = vision_controller.estimate_classifier();
+            std::vector<int> place = vision_controller.get_place();
+            std::cout << "place1: ";
+            for(auto it : place)
+            {
+                std::cout << it << ",";
+            }
+            std::cout << std::endl;
+            std::cout << "cls1: ";
+            for(auto it : cls)
+            {
+                std::cout << it << ",";
+            }
+            std::cout << std::endl;
+            vision_controller.save_log();
+            vision_controller.clear();
+
+            vision_controller2.set_roi12_place();
+            vision_controller2.set_cls();
+            // vision_controller2.set_post_cls();
+            vision_controller2.print_post_cls();
+        }
+        else if(flag == 4)
+        {
+            std::cout << "flag: "  << flag << std::endl;
+            vision_controller.use_relocation2();
+        }
+        else if(flag == 0)
+        {
+            std::cout << "flag: "  << flag << std::endl;
+            return;
+        }
+    }
+    urcu_memb_unregister_thread();
+}
+
+void input_code()
+{
+    int flag = 0;
+    while(Ten::_TREADPOOL_FLAG_.read_flag())
+    {
+       std::cin >> flag;
+       if(flag == 1)
+       {
+           std::cout << "flag: "  << flag << std::endl;
+           camera_calibration();
+       }
+       if(flag == 2)
+       {
+           std::cout << "flag: "  << flag << std::endl;
+           vision_code2();
+       }
+       else if(flag == 0)
+       {
+            return;
+       }
+    }
+}
+
+
+void test_pnp()
+{
+    urcu_memb_register_thread();
+
+    Ten::Ten_camera& camera = Ten::Ten_camera::GetInstance();
+    camera.reset_camera_depth(640, 480, 30);
+    rs2_intrinsics color_intr = camera.get_color_intrinsics();
+    Ten::KFS::kfsLocator pnp_hander(color_intr);
+
+    while (Ten::_TREADPOOL_FLAG_.read_flag())
+    {
+        Ten::camera_frame frame = camera.camera_read_depth();
+        double bias = pnp_hander.processOneFrame(frame.bgr_image,frame.depth_image);
+        std::cout << "bias: " << bias << std::endl;
+    }
+
+    urcu_memb_unregister_thread();
+}
 
 #endif
 

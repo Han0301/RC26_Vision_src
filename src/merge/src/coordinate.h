@@ -84,10 +84,10 @@ namespace Ten
             std::lock_guard<std::mutex> lock(mtx_);
             Eigen::Matrix4d T1 = XYZRPYtotransform_matrix(lidartocar_);
             Eigen::Matrix4d T1_N = T1.inverse();
-            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtolidar_);
+            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtolidar_ - stead_state_error_);
             Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
             Eigen::Matrix4d mix;
-            if(std::fabs(world2toworld1_._xyz._x) < 1e-8)
+            if(world2toworld1_ == Ten::XYZRPY())
             {
                 mix = T2;
             }
@@ -107,10 +107,10 @@ namespace Ten
             std::lock_guard<std::mutex> lock(mtx_);
             Eigen::Matrix4d T1 = XYZRPYtotransform_matrix(lidartocar_);
             Eigen::Matrix4d T1_N = T1.inverse();
-            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtolidar_);
+            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtolidar_ - stead_state_error_);
             Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
             Eigen::Matrix4d mix = T1 * T2 * T3 * T1_N;
-            XYZRPY xyzrpy = transform_matrixtoXYZRPY(mix) - stead_state_error_; 
+            XYZRPY xyzrpy = transform_matrixtoXYZRPY(mix); 
             return xyzrpy;
         }
 

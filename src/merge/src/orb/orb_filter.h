@@ -35,6 +35,8 @@ namespace Ten
         // #define offset_y_ 0             // y方向上的偏移量
         // #define offset_z_ 0             // z方向上的偏移量
 
+        #define _image_margin_ 30
+
 
         // 长方体（正方体）定义：8个世界坐标角点 + OBB包围盒（用于遮挡检测）
         struct Cube {
@@ -260,8 +262,8 @@ namespace Ten
                     // std::cout<< "img_height: " << img_height << std::endl;
 
 
-                    return (pixel_pt.x >= 0 && pixel_pt.x < img_width &&
-                            pixel_pt.y >= 0 && pixel_pt.y < img_height);
+                    return (pixel_pt.x >= -_image_margin_ && pixel_pt.x < img_width + _image_margin_ &&
+                            pixel_pt.y >= -_image_margin_ && pixel_pt.y < img_height + _image_margin_);
                 } catch (const cv::Exception& e) {
                     std::cerr << "[Error] projectPoints failed: " << e.what() << std::endl;
                     return false;
