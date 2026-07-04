@@ -18,7 +18,7 @@ namespace Ten
             float valid_exist_ = 0;
         };
 
-
+        //3分类
         class yolo_han
         {
         public:

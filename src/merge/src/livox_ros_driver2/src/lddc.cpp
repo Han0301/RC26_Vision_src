@@ -304,7 +304,7 @@ void Lddc::PublishCustomPointcloud(LidarDataQueue *queue, uint8_t index) {
         #endif
       }
       livox_pcl_cbk2(boost::make_shared<const livox_ros_driver::CustomMsg>(livox_msg));
-      //Ten::_LIVOX_GET_.write_data(livox_msg);
+      Ten::_LIVOX_GET_.write_data(livox_msg);
     }
     
     PublishCustomPointData(livox_msg, index);

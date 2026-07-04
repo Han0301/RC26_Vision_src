@@ -56,6 +56,8 @@ endif()
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+# 找到 Ceres 库（必须）
+find_package(Ceres REQUIRED)
 find_package(teaserpp REQUIRED)
 find_package(OpenMP QUIET)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -221,6 +223,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${TEASERPP_INCLUDE_DIRS}
   ${realsense2_INCLUDE_DIR}
+  ${CERES_INCLUDE_DIRS}   # 新增：Ceres 头文件
 )
 
 link_directories(
@@ -401,6 +404,7 @@ target_link_libraries(merge_node
   ${APR_LIBRARIES}
   ${PYTHON_LIBRARIES}
   ${URCU_LIB}
+  ${CERES_LIBRARIES}  # 新增：链接 Ceres 库（会自动带上 glog/gflags）
   #${realsense2_LIBRARIES} 
   /usr/lib/x86_64-linux-gnu/librealsense2.so
   openvino::runtime

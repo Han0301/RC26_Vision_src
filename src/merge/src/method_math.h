@@ -41,6 +41,11 @@ namespace Ten
             return result;
         }
 
+        double Eclidean_distance(const XYZ& site)
+        {
+            return (_x - site._x)*(_x - site._x) + (_y - site._y)*(_y - site._y) + (_z - site._z)*(_z - site._z);
+        }
+
         double _x = 0.0;
         double _y = 0.0;
         double _z = 0.0;
@@ -87,6 +92,25 @@ namespace Ten
             result._xyz = -this->_xyz; 
             result._rpy = -this->_rpy;   
             return result;
+        }
+
+        bool XYZRPYisnan() const
+        {
+            if(std::isnan(_xyz._x)||std::isnan(_xyz._y)||std::isnan(_xyz._z)||std::isnan(_rpy._roll)
+                ||std::isnan(_rpy._pitch)||std::isnan(_rpy._yaw)) 
+            {
+                return true;
+            }
+            return false;
+        }
+
+        double Eclidean_distance(const XYZRPY pose)
+        {
+            if(XYZRPYisnan() || pose.XYZRPYisnan())
+            {
+                return -1;
+            }
+            return _xyz.Eclidean_distance(pose._xyz);
         }
 
         XYZ _xyz;
@@ -238,7 +262,12 @@ namespace Ten
      */
     std::vector<Ten::XYZRPY> readPoseFromTxt(const std::string& filePath);
 
-
+    /**
+     * @brief 核心函数：读取单行数字txt文件，将每个字符转为整数并存储到vector<int>中
+     * @param filePath 传入的txt文件路径（字符串常量引用，避免拷贝）
+     * @return std::vector<int> 存储拆分后整数的容器
+     */
+    std::vector<int> readNumberFile(const std::string& filePath); 
     
 
 }

@@ -9,7 +9,12 @@
 #include <condition_variable>
 #include <functional>
 #include <future>
-
+#include <pthread.h>
+#include <sched.h>
+#include <unistd.h>
+#include <cstring>
+#include <cerrno>
+#include <sys/resource.h>
 
 namespace Ten
 {
@@ -131,7 +136,19 @@ private:
 
 };
 
-
+/**
+ * @brief 将当前调用该函数的线程设置为高优先级（分配更多CPU资源）
+ * @param realtime_priority 实时调度优先级（1-99，建议10-50，默认50）
+ * @param nice_value 普通调度的nice值（-20~19，越小优先级越高，默认-10）
+ * @return int 0=成功（实时调度）, 1=降级为nice值调整成功, -1=所有尝试失败
+ */
+int set_thread_as_important(int realtime_priority = 10, int nice_value = -10);
+/**
+ * @brief 绑定当前线程到指定CPU核心（解决CPU密集型线程核心漂移/缓存失效问题）
+ * @param cpu_core 目标CPU核心编号（从0开始，如0/1/2...，需小于系统总核心数）
+ * @return bool true=绑定成功，false=绑定失败（核心非法/权限不足）
+ */
+bool bind_thread_to_cpu(int cpu_core);
 
 extern Ten::ThreadPool_flag _TREADPOOL_FLAG_;
 

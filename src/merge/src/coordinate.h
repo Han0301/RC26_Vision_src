@@ -64,6 +64,44 @@ namespace Ten
         //     return xyzrpy;
         // }
 
+
+        /**
+         * @brief 得到雷达到车的变换
+         * @param Eigen::Matrix4d: 雷达到车的变换
+         */
+        Eigen::Matrix4d get_lidartocar()
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            return XYZRPYtotransform_matrix(lidartocar_);
+        }
+
+        /**
+         * @brief 得到世界到雷达变换
+         * @param Eigen::Matrix4d: 世界到雷达变换
+         */
+        Eigen::Matrix4d get_world2tolidar()
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            Eigen::Matrix4d T1 = XYZRPYtotransform_matrix(lidartocar_);
+            Eigen::Matrix4d T1_N = T1.inverse();
+            Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtolidar_);
+            Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
+            Eigen::Matrix4d mix;
+            if(std::fabs(world2toworld1_._xyz._x) < 1e-8)
+            {
+                mix = T2;
+            }
+            else
+            {
+                mix = T2 * T3 * T1_N;
+            }
+            return mix;
+        }
+
+        /**
+         * @brief 车相对于世界坐标的位姿
+         * @param Ten::XYZRPY: 车相对于世界坐标的位姿
+         */
         Ten::XYZRPY getXYZRPY()
         {
             std::lock_guard<std::mutex> lock(mtx_);

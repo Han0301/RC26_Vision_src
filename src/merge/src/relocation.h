@@ -333,7 +333,7 @@ private:
         // 4. 设置ICP默认核心参数（经典默认值，适配多数场景）
         icp.setMaximumIterations(100);                // 最大迭代次数
         icp.setTransformationEpsilon(1e-8);          // 收敛阈值（迭代停止条件）
-        icp.setMaxCorrespondenceDistance(0.05);      // 最大对应点距离阈值（单位：m）
+        icp.setMaxCorrespondenceDistance(0.55);      // 最大对应点距离阈值（单位：m）
         icp.setEuclideanFitnessEpsilon(1e-6);        // 欧式适应度阈值（拟合精度）
 
         // 5. 执行ICP配准（无需保存配准后点云，仅执行配准计算）

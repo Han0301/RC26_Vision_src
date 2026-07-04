@@ -70,7 +70,7 @@ namespace Ten
                     {
                         // 立方体1：中心(x,y,z)，尺寸(0.35,0.35,0.35)，无旋转
                         Cube box;
-                        box.center = Eigen::Vector3d(X_ + i*L_ + lx1_ + box_half_length_ + offset_x_, Y_ - j*L_- ly1_ - box_half_length_ + offset_y_, hight_[i*3 + j] + box_half_length_ + offset_z_);
+                        box.center = Eigen::Vector3d(X_ + i*L_ + lx1_ + box_half_length_ + offset_x_, Y_ - j*L_- ly1_ - box_half_length_ + offset_y_, hight_[i*3 + j] + box_half_length_ + offset_z_ - LIDAR_HEIGHT_);
                         box.axes[0] = Eigen::Vector3d(1,0,0);
                         box.axes[1] = Eigen::Vector3d(0,1,0);
                         box.axes[2] = Eigen::Vector3d(0,0,1);
@@ -85,7 +85,7 @@ namespace Ten
                     for(size_t j = 0; j < 3; j++)
                     {
                         Cube step;
-                        step.center = Eigen::Vector3d(X_ + i*L_ + step_half_length_  + offset_x_, Y_ - j*L_ - step_half_length_  + offset_y_, hight_[i*3 + j] / 2.0  + offset_z_);
+                        step.center = Eigen::Vector3d(X_ + i*L_ + step_half_length_  + offset_x_, Y_ - j*L_ - step_half_length_  + offset_y_, hight_[i*3 + j] / 2.0  + offset_z_ - LIDAR_HEIGHT_);
                         step.axes[0] = Eigen::Vector3d(1,0,0);
                         step.axes[1] = Eigen::Vector3d(0,1,0);
                         step.axes[2] = Eigen::Vector3d(0,0,1);

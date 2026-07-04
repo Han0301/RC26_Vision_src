@@ -49,7 +49,7 @@ public:
      */
     void set_distCoeffs(cv::Mat distCoeffs)
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         if(distCoeffs.rows != 5 || distCoeffs.cols != 1)
         {
             std::cout<< "distCoeffs.rows != 5 || distCoeffs.cols != 1" << std::endl;
@@ -66,7 +66,7 @@ public:
      */
     void set_K(cv::Mat K)
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         if(K.rows != 3 || K.cols != 3)
         {
             std::cout<< "K.rows != 3 || K.cols != 3" << std::endl;
@@ -84,7 +84,7 @@ public:
      */
     void set_RT(cv::Mat rvec, cv::Mat tvec)
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         if(rvec.rows != 3 && rvec.cols != 1)
         {
             std::cout<< "error! Eigen::Matrix3d RotationMatrixtorvec(cv::Mat rvec)" << std::endl;
@@ -110,7 +110,7 @@ public:
      */
     void set_HW(int image_H, int image_W)
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         image_H_ = image_H;
         image_W_ = image_W;
@@ -123,7 +123,7 @@ public:
      */
     void set_Extrinsic_Matrix(Eigen::Matrix4d extrinsic)
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         extrinsic_ = extrinsic;
         resetRTrt();
@@ -135,7 +135,7 @@ public:
      */
     void set_Extrinsic_Matrix(const double arr[4][4])
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         //extrinsic_ = extrinsic;
         for(size_t i = 0; i < 4; i++)
@@ -154,7 +154,7 @@ public:
      */
     Eigen::Matrix3d R() const
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return R_;
     }
@@ -165,7 +165,7 @@ public:
      */
     Eigen::Vector3d T() const
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return T_;
     }
@@ -176,7 +176,7 @@ public:
      */
     cv::Mat rvec() const
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return rvec_;
     }
@@ -187,7 +187,7 @@ public:
      */    
     cv::Mat tvec() const
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return tvec_;
     }
@@ -198,7 +198,7 @@ public:
      */    
     cv::Mat K() const 
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return K_;
     }
@@ -209,7 +209,7 @@ public:
      */    
     cv::Mat distCoeffs() const 
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return distCoeffs_;
     }
@@ -220,7 +220,7 @@ public:
      */    
     Eigen::Matrix4d extrinsic() const
     {
-        std::mutex mtx_;
+        //std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return extrinsic_;
     }
@@ -269,18 +269,12 @@ Eigen::Matrix3d R_;
 Eigen::Vector3d T_;
 int image_H_ = 1080;
 int image_W_ = 1920;
-//mutable std::mutex mtx_;
+mutable std::mutex mtx_;
 };
 
 
 
 
-    /**
-     * @brief 核心函数：遍历文件夹并返回Ten_camerainfo容器
-     * @param rootDir: 总目录的文件夹路径
-     * @return std::vector<Ten::Ten_camerainfo>
-     */
-    std::vector<Ten::Ten_camerainfo> readCameraInfosFromDir(const std::string& rootDir);
 
 
 
@@ -289,6 +283,5 @@ int image_W_ = 1920;
 
 
 #endif
-
 
 

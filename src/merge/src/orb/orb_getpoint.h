@@ -102,6 +102,10 @@ namespace Ten
                 // 遍历每个检测结果，提取中心点坐标构造Point2d
                 for (const auto& det : detections) {
                     // cv::Point2d的构造函数为Point2d(double x, double y)
+                    if(det.cls_id_ != 1)
+                    {
+                        continue;
+                    }
                     points.emplace_back(det.cx_, det.cy_);
                 }
                 return points;

@@ -5,7 +5,7 @@
 
 namespace Ten
 {
-    Ten::Ten_calibration _CALCULATE_LIDAR_TO_CAMERA_TRANSFORM_;
+    //Ten::Ten_calibration _CALCULATE_LIDAR_TO_CAMERA_TRANSFORM_;
 }
 
 

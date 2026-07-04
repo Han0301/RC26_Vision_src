@@ -165,6 +165,9 @@ void Ten_occlusion_handing::set_box_lists_(
         }
         if (!(is_update_img)) continue;
         
+        // 填充point_size
+        box_lists[i / 3].point_size = valid_max_points.size();
+
         // 4.3 准备有效区域的掩码, 并更新有效区域的外接x_min,y_min,x_max,y_max
         int x_min = INT_MAX, x_max = INT_MIN;   
         int y_min = INT_MAX, y_max = INT_MIN;

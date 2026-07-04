@@ -296,7 +296,7 @@ namespace Ten
     {
         cv::Mat tvec;
         //tevc = cv::Mat(3, 1, CV_32FC1, T.data()).clone();
-        tvec = (cv::Mat_<float>(3, 1) << T(0), T(1), T(2));
+        tvec = (cv::Mat_<double>(3, 1) << T(0), T(1), T(2));
         return tvec;
     }
 
@@ -347,6 +347,8 @@ namespace Ten
      */
     bool getpath(std::string txt_path, std::vector<int>& map, std::vector<int>& path)
     {
+        //先清理
+        path.clear();
         // 创建一个map容器，键为string类型(编号)，值为vector<int>(数字集合)
         // 用于存储文件中读取的编号及其对应的数字
         std::map<std::string, std::vector<int>> data;
@@ -560,6 +562,48 @@ namespace Ten
     }
     
 
+    /**
+     * @brief 核心函数：读取单行数字txt文件，将每个字符转为整数并存储到vector<int>中
+     * @param filePath 传入的txt文件路径（字符串常量引用，避免拷贝）
+     * @return std::vector<int> 存储拆分后整数的容器
+     */
+    std::vector<int> readNumberFile(const std::string& filePath) 
+    {
+        // 定义整型向量，用于存储最终拆分后的数字
+        std::vector<int> numVec;
+
+        // 以只读模式打开指定路径的txt文件
+        std::ifstream file(filePath);
+
+        // 判断文件是否成功打开（文件不存在/权限不足会打开失败）
+        if (!file.is_open()) {
+            // 控制台输出错误信息
+            std::cerr << "错误：无法打开文件 " << filePath << std::endl;
+            // 返回空向量，终止函数
+            return numVec;
+        }
+
+        // 定义字符串变量，存储读取到的文件一行内容
+        std::string content;
+        // 读取文件中唯一的一行文本，存入content字符串
+        std::getline(file, content);
+
+        // 遍历字符串中的每一个字符（即每个数字字符）
+        for (char ch : content) {
+            // 字符数字转整型数字：'0'的ASCII码是48，字符减'0'得到对应整数
+            int num = ch - '0';
+            std::cout << num << " ";
+            // 将转换后的整数添加到向量末尾
+            numVec.push_back(num);
+        }
+        std::cout << std::endl;
+
+        // 读取完成，关闭文件（释放资源）
+        file.close();
+
+        // 返回存储好数字的向量
+        return numVec;
+    }
 
 
 

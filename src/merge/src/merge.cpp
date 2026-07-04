@@ -135,13 +135,13 @@ void sigintHandler(int sig)
         signal(SIGINT, sigintHandler);
 
         std::cout << "🐅: " << "R0" << std::endl;
-        // std::string lidar_path = std::string(ROOT_DIR) + std::string("src/livox_ros_driver2/config/MID360_config.json");
-        // Ten::Ten_lidar::GetInstance(lidar_path);
-        Ten::ThreadPool pool(1);
-        //pool.enqueue(orb_test);
-        pool.enqueue(vision_test2);
+        std::string lidar_path = std::string(ROOT_DIR) + std::string("src/livox_ros_driver2/config/MID360_config.json");
+        //Ten::Ten_lidar::GetInstance(lidar_path);
+        //Ten::ThreadPool pool(2);
+        //pool.enqueue(vision_test_input_lidar);
+        //pool.enqueue(test_calibration);
         //laserMapping();
- 
+        vision_test_lidar_getttf();
         
         return 0;
     }

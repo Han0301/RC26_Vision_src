@@ -1,0 +1,8 @@
+prefix=/home/h/RC26_Vision_src/devel
+
+Name: merge
+Description: Description of merge
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: roscpp sensor_msgs cv_bridge vision_msgs

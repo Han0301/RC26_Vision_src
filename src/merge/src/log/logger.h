@@ -134,13 +134,17 @@ namespace Ten
         /**
          * @brief 保存图片信息
          * @param oees: 参数信息r,t,image
+         * @param place: 方块位置信息
          * @return bool：是否保存成功
          */
-        bool record_imageRT(const std::vector<Ten::ORB::orb_exhaust_element> oees)
+        bool record_imageRT(const std::vector<Ten::ORB::orb_exhaust_element> oees, std::vector<int> place = std::vector<int>())
         {
             std::lock_guard<std::mutex> lock(image_mtx_);
             static size_t directory_num = 1;
-
+            if(oees.empty())
+            {
+                return false;
+            }
             // 1. 创建根目录 imageRT
             std::string root_dir = directory_ + "/imageRT";
             if (directory_num == 1 && !create_directory(root_dir))
@@ -189,14 +193,33 @@ namespace Ten
                 double r1 = oees[i].rvec_.at<double>(0, 0);
                 double r2 = oees[i].rvec_.at<double>(1, 0);
                 double r3 = oees[i].rvec_.at<double>(2, 0);
+                //std::cout << "--------rvec----" << i << "-----" <<std::endl;
+                //std::cout << oees[i].rvec_ << std::endl;
+                //std::cout << r1 << ", " << r2 << ", " << r3 << std::endl;
                 rt_file << r1 << ", " << r2 << ", " << r3 << std::endl;
 
                 // 读取平移向量tvec（3x1 CV_64F）并写入第二行
                 double t1 = oees[i].tvec_.at<double>(0, 0);
                 double t2 = oees[i].tvec_.at<double>(1, 0);
                 double t3 = oees[i].tvec_.at<double>(2, 0);
+                //std::cout << "--------tvec----" << i << "-----" <<std::endl;
+                //std::cout << oees[i].tvec_ << std::endl;
+                // std::cout << "--------tvec维度&类型----" << i << "-----" << std::endl;
+                // std::cout << "行数：" << oees[i].tvec_.rows 
+                //         << " 列数：" << oees[i].tvec_.cols 
+                //         << " 数据类型：" << oees[i].tvec_.type() 
+                //         << " (CV_64F对应值：" << CV_64F << ")" << std::endl;
+                //std::cout << t1 << ", " << t2 << ", " << t3 << std::endl;
                 rt_file << t1 << ", " << t2 << ", " << t3 << std::endl;
-
+                //std::cout << "place.size(): " << place.size() << std::endl;
+                if(place.size() == 12)
+                {
+                    for(size_t i = 0; i < place.size(); i++)
+                    {
+                        rt_file << place[i] << " ";
+                    }
+                    rt_file << std::endl;
+                }
                 // 关闭文件并检查写入是否成功
                 rt_file.close();
                 if (rt_file.fail())
