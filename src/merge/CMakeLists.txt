@@ -108,7 +108,7 @@ find_package(OpenCV REQUIRED)
 find_package(OpenVINO REQUIRED)
 #find_package(OpenVINO REQUIRED COMPONENTS Runtime)
 find_package(PkgConfig REQUIRED)
-
+find_package(apriltag REQUIRED)
 find_package(realsense2)
 find_package(yaml-cpp REQUIRED)
 
@@ -344,6 +344,8 @@ target_sources(merge_node
   src/serial.cpp
   src/camera.cpp
   src/camera2.cpp
+  src/usb_cam.cpp
+  src/usb_cam_multi.cpp
   src/coordinate.cpp
   src/velocity.cpp
   src/calibration.cpp
@@ -351,7 +353,9 @@ target_sources(merge_node
   src/log/logger.cpp
   src/yolo/yolo_base.cpp
   src/orb/orb_debug.cpp
-  src/PnP/pnp.cpp
+  src/apriltag/apriltag.cpp
+  src/superstratum/controlR2.cpp
+  src/mapping/mapping.cpp
   src/recognition/world_to_camera.cpp
   src/recognition/camera_calibration.cpp
   #src/recognition/zbuffer_simplify.cpp
@@ -430,6 +434,7 @@ target_link_libraries(merge_node
   teaser_io
   nano_gicp  # 关键：链接本地编译的nano_gicp库
   nanoflann  # 可选：如果需要的话
+  apriltag::apriltag
 )
 
 

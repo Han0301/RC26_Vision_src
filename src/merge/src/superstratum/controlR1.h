@@ -186,7 +186,7 @@ namespace Ten
                     }
                     Ten::PV pose_and_velocity_ekf = ekf_fliter.process(pose_and_velocity_now, dt);
                     last_time = curtime;
-                    pose = pose_and_velocity_ekf.pose;
+                    //pose = pose_and_velocity_ekf.pose;
                     lidar_LA = pose_and_velocity_ekf.velocity;
 
                     Ten::_COORDINATE_TRANSFORMATION_.set_worldtolidar(pose);
@@ -335,17 +335,18 @@ namespace Ten
                 urcu_memb_unregister_thread();
             }
 
+
             static bool calibration2()
             {
-                std::string log_path = std::string(ROOT_DIR) + std::string("map/map.pcd");
-                //std::string log_path = std::string("/home/maple/study2/maple/map/map.pcd");
-                Ten::Ten_relocation<pcl::PointXYZI> rel(log_path);
+                static Ten::Ten_logger& log = Ten::Ten_logger::GetInstance(std::string(ROOT_DIR) + std::string("log"));
+                static Ten::Ten_relocation<pcl::PointXYZI> rel(std::string(ROOT_DIR) + std::string("map/map.pcd"));
+                static int num;
                 Ten::XYZRPY xyzrpy = rel.get_transformation();
                 if(xyzrpy == Ten::XYZRPY())
                 {
                     return false;
                 }
-
+                num++;
                 std::cout << "---------------------------" << std::endl; 
                 std::cout << "x: " << xyzrpy._xyz._x << std::endl;
                 std::cout << "y: " << xyzrpy._xyz._y << std::endl;
@@ -361,10 +362,13 @@ namespace Ten
                 xyzrpy_error._rpy._roll = _r1_xyzrpy_error_rpy_roll_;
                 xyzrpy_error._rpy._pitch = _r1_xyzrpy_error_rpy_pitch_;
                 xyzrpy_error._rpy._yaw = _r1_xyzrpy_error_rpy_yaw_;
-                Ten::XYZRPY world_origin = Ten::transform_matrixtoXYZRPY(Ten::XYZRPYtotransform_matrix(xyzrpy) * Ten::XYZRPYtotransform_matrix(xyzrpy_error) * Ten::_COORDINATE_TRANSFORMATION_.get_lidartocar());
+
+                log.record_XYZRPY(xyzrpy, std::string("relocation") + std::to_string(num));
+
                 //Ten::XYZRPY world_origin = Ten::transform_matrixtoXYZRPY(Ten::worldtocurrent(xyzrpy._xyz, xyzrpy._rpy) * Ten::worldtocurrent(xyzrpy_error._xyz, xyzrpy_error._rpy) * Ten::_COORDINATE_TRANSFORMATION_.get_lidartocar());
+                Ten::XYZRPY world_origin = Ten::transform_matrixtoXYZRPY(Ten::XYZRPYtotransform_matrix(xyzrpy) * Ten::XYZRPYtotransform_matrix(xyzrpy_error) * Ten::_COORDINATE_TRANSFORMATION_.get_lidartocar());
                 Ten::_COORDINATE_TRANSFORMATION_.set_world2toworld1(world_origin);
-                Ten::_PUB_CLOUD_FLAG_.set_flag(0);
+                Ten::_PUB_CLOUD_FLAG_.set_flag(false);
                 return true;
             }
 

@@ -5,7 +5,6 @@ install/
 *.pyc
 __pycache__/
 .catkin_tools/
-cmake-build-*/
 *.bag
 *.pcd
 *.log
@@ -15,7 +14,4 @@ cmake-build-*/
 *.so
 *.a
 .DS_Store
-last/
-relocation.txt
-merge_test*.txt
 .vscode/

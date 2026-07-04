@@ -8,140 +8,178 @@
 #include <vector>
 #include "./../method_math.h"
 
+// 四元数运算（必备）
+namespace Ten {
+struct Quaternion {
+    double w, x, y, z;
+    Quaternion() : w(1), x(0), y(0), z(0) {}
+    Quaternion(double w_, double x_, double y_, double z_) : w(w_), x(x_), y(y_), z(z_) {}
+};
 
-namespace Ten
-{
+// ✅ 修复：加 inline
+inline Quaternion normalize(const Quaternion& q) {
+    double norm = sqrt(q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z);
+    return Quaternion(q.w/norm, q.x/norm, q.y/norm, q.z/norm);
+}
+
+// ✅ 修复：加 inline
+inline Quaternion quatDerivative(const Quaternion& q, const XYZ& body_omega) {
+    double w = q.w, x = q.x, y = q.y, z = q.z;
+    double wx = body_omega._x, wy = body_omega._y, wz = body_omega._z;
+    Quaternion dq;
+    dq.w = 0.5 * (-x*wx - y*wy - z*wz);
+    dq.x = 0.5 * (w*wx + y*wz - z*wy);
+    dq.y = 0.5 * (w*wy - x*wz + z*wx);
+    dq.z = 0.5 * (w*wz + x*wy - y*wx);
+    return dq;
+}
+
+// ✅ 修复：加 inline
+inline void quatToRot(const Quaternion& q, std::vector<std::vector<double>>& rot) {
+    double w = q.w, x = q.x, y = q.y, z = q.z;
+    rot[0][0] = 1-2*y*y-2*z*z; rot[0][1] = 2*x*y-2*z*w;   rot[0][2] = 2*x*z+2*y*w;
+    rot[1][0] = 2*x*y+2*z*w;   rot[1][1] = 1-2*x*x-2*z*z; rot[1][2] = 2*y*z-2*x*w;
+    rot[2][0] = 2*x*z-2*y*w;   rot[2][1] = 2*y*z+2*x*w;   rot[2][2] = 1-2*x*x-2*y*y;
+}
+
+// ✅ 修复：加 inline
+inline Quaternion rpyToQuat(const RPY& rpy) {
+    double cr = cos(rpy._roll*0.5), sr = sin(rpy._roll*0.5);
+    double cp = cos(rpy._pitch*0.5), sp = sin(rpy._pitch*0.5);
+    double cy = cos(rpy._yaw*0.5), sy = sin(rpy._yaw*0.5);
+    Quaternion q;
+    q.w = cr*cp*cy + sr*sp*sy;
+    q.x = sr*cp*cy - cr*sp*sy;
+    q.y = cr*sp*cy + sr*cp*sy;
+    q.z = cr*cp*sy - sr*sp*cy;
+    return q;
+}
+
+// ✅ 修复：加 inline
+inline RPY quatToRpy(const Quaternion& q) {
+    RPY rpy;
+    double w = q.w, x = q.x, y = q.y, z = q.z;
+    rpy._roll  = atan2(2*(w*x + y*z), 1-2*(x*x + y*y));
+    rpy._pitch = asin(-2*(x*z - w*y));
+    rpy._yaw   = atan2(2*(w*z + x*y), 1-2*(y*y + z*z));
+    return rpy;
+}
 
 class ImuOdometry
 {
 public:
-    /**
-     * @brief 构造函数
-     */
     ImuOdometry(size_t max_queue = 20, 
-                const XYZ& gravity = XYZ{0.0, 0.0,  -9.81215},
+                const XYZ& gravity = XYZ{0.0, 0.0,  0.9810},
                 double ang_deadzone = 0.02,
-                double acc_deadzone = 0.01,
-                double vel_deadzone = 0.01)  // 【新增】初始速度死区默认值
+                double acc_deadzone = 0.02,
+                double vel_deadzone = 0.02)
         : max_queue_size_(max_queue),
           gravity_world_(gravity),
           angular_vel_deadzone_(ang_deadzone),
           linear_acc_deadzone_(acc_deadzone),
-          velocity_deadzone_(vel_deadzone)  // 【新增】初始化速度死区
+          velocity_deadzone_(vel_deadzone)
     {
-        // 初始化实时旋转矩阵
         current_rot_.assign(3, std::vector<double>(3, 0.0));
+        base_quat_ = Quaternion();
+        rel_quat_ = Quaternion();
     }
 
-    // ==================== 新增：独立插入IMU数据函数 ====================
-    void addImuData(const sensor_msgs::Imu& imu_msg)
-    {
+    void addImuData(const sensor_msgs::Imu& imu_msg) {
         cacheImuData(imu_msg);
     }
 
-    // ==================== 修改后：processImu 移除 imu_msg ====================
-    /**
-     * @param initial_vel 小段积分初始速度
-     * @param base_rpy IMU坐标系相对于Z轴朝上世界系的固定轴旋转
-     * @return 小段相对位姿
-     */
-    XYZRPY processImu(const XYZ& initial_vel, const RPY& base_rpy)
-    {
-        // 直接积分缓存的IMU数据
-        return integrateWindow(initial_vel, base_rpy);
+    XYZRPY processImu(const XYZ& initial_vel, const RPY& base_rpy) {
+        base_quat_ = rpyToQuat(base_rpy);
+        rel_quat_ = Quaternion();
+        return integrateWindow(initial_vel);
     }
 
-    // 重置队列（清空所有IMU数据）
-    void resetQueue()
-    {
+    void resetQueue() {
         std::queue<sensor_msgs::Imu> empty_q;
         std::swap(imu_queue_, empty_q);
     }
 
-    // 参数配置接口
     void setMaxQueueSize(size_t size) { max_queue_size_ = size; }
     void setWorldGravity(const XYZ& gravity) { gravity_world_ = gravity; }
     void setAngularVelDeadzone(double threshold) { angular_vel_deadzone_ = std::fabs(threshold); }
     void setLinearAccDeadzone(double threshold) { linear_acc_deadzone_ = std::fabs(threshold); }
-    void setVelocityDeadzone(double threshold) { velocity_deadzone_ = std::fabs(threshold); }  // 【新增】速度死区配置接口
+    void setVelocityDeadzone(double threshold) { velocity_deadzone_ = std::fabs(threshold); }
 
 private:
-    // 缓存IMU数据（私有，外部通过addImuData调用）
-    void cacheImuData(const sensor_msgs::Imu& imu_msg)
-    {
+    void cacheImuData(const sensor_msgs::Imu& imu_msg) {
         imu_queue_.push(imu_msg);
-        // 保持队列最大长度
-        while (imu_queue_.size() > max_queue_size_) {
-            imu_queue_.pop();
-        }
+        while (imu_queue_.size() > max_queue_size_) imu_queue_.pop();
     }
 
-    /**
-     * @brief 核心积分：动态更新旋转矩阵
-     * @param base_rpy 外部传入：IMU→世界系 基础固定轴RPY
-     */
-    XYZRPY integrateWindow(const XYZ& initial_vel, const RPY& base_rpy)
+    XYZ crossProduct(const XYZ& v1, const XYZ& v2) const {
+        XYZ res;
+        res._x = v1._y * v2._z - v1._z * v2._y;
+        res._y = v1._z * v2._x - v1._x * v2._z;
+        res._z = v1._x * v2._y - v1._y * v2._x;
+        return res;
+    }
+
+    void applyDeadzone(XYZ& vec, double threshold) const {
+        if (std::fabs(vec._x) < threshold) vec._x = 0.0;
+        if (std::fabs(vec._y) < threshold) vec._y = 0.0;
+        if (std::fabs(vec._z) < threshold) vec._z = 0.0;
+    }
+
+    void transformImuToWorld(double x, double y, double z, XYZ& out) {
+        out._x = current_rot_[0][0]*x + current_rot_[0][1]*y + current_rot_[0][2]*z;
+        out._y = current_rot_[1][0]*x + current_rot_[1][1]*y + current_rot_[1][2]*z;
+        out._z = current_rot_[2][0]*x + current_rot_[2][1]*y + current_rot_[2][2]*z;
+    }
+
+    XYZRPY integrateWindow(const XYZ& initial_vel)
     {
-        XYZ rel_pos;        // 输出：相对位置
-        RPY rel_rpy;        // 输出：相对姿态
-        
-        // ==================== 【核心新增】初始速度死区处理 ====================
+        XYZ rel_pos;
         XYZ filtered_vel = initial_vel;
-        if (std::fabs(filtered_vel._x) < velocity_deadzone_) filtered_vel._x = 0.0;
-        if (std::fabs(filtered_vel._y) < velocity_deadzone_) filtered_vel._y = 0.0;
-        if (std::fabs(filtered_vel._z) < velocity_deadzone_) filtered_vel._z = 0.0;
-        
-        XYZ rel_vel = filtered_vel;  // 使用死区过滤后的初始速度
+        applyDeadzone(filtered_vel, velocity_deadzone_);
+        XYZ rel_vel = filtered_vel;
 
         double last_ts = 0.0;
-
         std::queue<sensor_msgs::Imu> temp_q = imu_queue_;
+
         while (!temp_q.empty())
         {
             const auto imu = temp_q.front();
             temp_q.pop();
-
             const double curr_ts = imu.header.stamp.toSec();
-            if (last_ts == 0.0) {
-                last_ts = curr_ts;
-                continue;
-            }
-            const double dt = curr_ts - last_ts;
+            if (last_ts == 0.0) { last_ts = curr_ts; continue; }
+            double dt = curr_ts - last_ts;
 
-            // ==================== 关键：实时计算总姿态旋转矩阵 ====================
-            // 总姿态 = 外部基础RPY + 积分的相对RPY
-            const double total_roll  = base_rpy._roll  + rel_rpy._roll;
-            const double total_pitch = base_rpy._pitch + rel_rpy._pitch;
-            const double total_yaw   = base_rpy._yaw   + rel_rpy._yaw;
-            // 每帧重新计算变换矩阵
-            computeRotationMatrix(total_roll, total_pitch, total_yaw, current_rot_);
+            XYZ body_omega{imu.angular_velocity.x, imu.angular_velocity.y, imu.angular_velocity.z};
+            applyDeadzone(body_omega, angular_vel_deadzone_);
 
-            // Step1：用最新旋转矩阵变换IMU数据到世界坐标系
-            XYZ angular_vel, linear_acc;
-            transformImuToWorld(imu.angular_velocity.x, imu.angular_velocity.y, imu.angular_velocity.z, angular_vel);
+            Quaternion dq = quatDerivative(rel_quat_, body_omega);
+            rel_quat_.w += dq.w * dt;
+            rel_quat_.x += dq.x * dt;
+            rel_quat_.y += dq.y * dt;
+            rel_quat_.z += dq.z * dt;
+            rel_quat_ = normalize(rel_quat_);
+
+            Quaternion total_quat = base_quat_;
+            quatToRot(total_quat, current_rot_);
+
+            XYZ linear_acc;
+            // std::cout << "imu.linear_acceleration.x: " << imu.linear_acceleration.x << std::endl;
+            // std::cout << "imu.linear_acceleration.y: " << imu.linear_acceleration.y << std::endl;
+            // std::cout << "imu.linear_acceleration.z: " << imu.linear_acceleration.z << std::endl;
             transformImuToWorld(imu.linear_acceleration.x, imu.linear_acceleration.y, imu.linear_acceleration.z, linear_acc);
 
-            // 角速度死区
-            if (std::fabs(angular_vel._x) < angular_vel_deadzone_) angular_vel._x = 0.0;
-            if (std::fabs(angular_vel._y) < angular_vel_deadzone_) angular_vel._y = 0.0;
-            if (std::fabs(angular_vel._z) < angular_vel_deadzone_) angular_vel._z = 0.0;
+            XYZ omega_world;
+            transformImuToWorld(body_omega._x, body_omega._y, body_omega._z, omega_world);
+            XYZ omega_cross_r = crossProduct(omega_world, rel_pos);
+            XYZ centripetal_acc = crossProduct(omega_world, omega_cross_r);
+            centripetal_acc = -centripetal_acc;
 
-            // Step2：积分相对姿态
-            rel_rpy._roll  += angular_vel._x * dt;
-            rel_rpy._pitch += angular_vel._y * dt;
-            rel_rpy._yaw   += angular_vel._z * dt;
+            linear_acc._x -= (gravity_world_._x + centripetal_acc._x);
+            linear_acc._y -= (gravity_world_._y + centripetal_acc._y);
+            linear_acc._z -= (gravity_world_._z + centripetal_acc._z);
 
-            // Step3：去除重力加速度
-            linear_acc._x -= gravity_world_._x;
-            linear_acc._y -= gravity_world_._y;
-            linear_acc._z -= gravity_world_._z;
+            applyDeadzone(linear_acc, linear_acc_deadzone_);
 
-            // 线加速度死区
-            if (std::fabs(linear_acc._x) < linear_acc_deadzone_) linear_acc._x = 0.0;
-            if (std::fabs(linear_acc._y) < linear_acc_deadzone_) linear_acc._y = 0.0;
-            if (std::fabs(linear_acc._z) < linear_acc_deadzone_) linear_acc._z = 0.0;
-
-            // Step4：速度+位置积分
             rel_vel._x += linear_acc._x * dt;
             rel_vel._y += linear_acc._y * dt;
             rel_vel._z += linear_acc._z * dt;
@@ -153,51 +191,22 @@ private:
             last_ts = curr_ts;
         }
 
-        // 输出小段相对位姿
         XYZRPY relative_pose;
         relative_pose._xyz = rel_pos;
-        relative_pose._rpy = rel_rpy;
+        relative_pose._rpy = quatToRpy(rel_quat_);
         return relative_pose;
     }
 
-    // 旋转矩阵计算（固定轴）
-    void computeRotationMatrix(double roll, double pitch, double yaw, std::vector<std::vector<double>>& rot)
-    {
-        const double cr = cos(roll), sr = sin(roll);
-        const double cp = cos(pitch), sp = sin(pitch);
-        const double cy = cos(yaw), sy = sin(yaw);
-
-        rot[0][0] = cp*cy;   rot[0][1] = sr*sp*cy - cr*sy; rot[0][2] = cr*sp*cy + sr*sy;
-        rot[1][0] = cp*sy;   rot[1][1] = sr*sp*sy + cr*cy; rot[1][2] = cr*sp*sy - sr*cy;
-        rot[2][0] = -sp;     rot[2][1] = sr*cp;            rot[2][2] = cr*cp;
-    }
-
-    // 坐标变换：IMU系 → 世界系（实时旋转矩阵）
-    void transformImuToWorld(double x, double y, double z, XYZ& out)
-    {
-        out._x = current_rot_[0][0]*x + current_rot_[0][1]*y + current_rot_[0][2]*z;
-        out._y = current_rot_[1][0]*x + current_rot_[1][1]*y + current_rot_[1][2]*z;
-        out._z = current_rot_[2][0]*x + current_rot_[2][1]*y + current_rot_[2][2]*z;
-    }
-
 private:
-    // IMU数据缓存队列
     std::queue<sensor_msgs::Imu> imu_queue_;
     size_t max_queue_size_;
-
-    // 重力参数
     XYZ gravity_world_;
-
-    // 死区参数
-    double angular_vel_deadzone_;
-    double linear_acc_deadzone_;
-    double velocity_deadzone_;  // 【新增】初始速度死区成员变量
-
-    // 实时旋转矩阵（每帧更新）
+    double angular_vel_deadzone_, linear_acc_deadzone_, velocity_deadzone_;
     std::vector<std::vector<double>> current_rot_;
+    Quaternion base_quat_;
+    Quaternion rel_quat_;
 };
 
 }
-
 
 #endif

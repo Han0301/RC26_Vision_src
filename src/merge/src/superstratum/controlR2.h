@@ -1,10 +1,13 @@
 #ifndef __CONTROLR2_H_
 #define __CONTROLR2_H_
 #include "./controlR1.h"
-#include "./../PnP/pnp_main.h"
+#include "./../apriltag/apriltag_pose_module.h"
 
 namespace Ten
 {
+    std::vector<int> readFileToAsciiVector(const std::string& filePath);
+    void script_control();
+
     namespace superstratum
     {
 
@@ -260,7 +263,7 @@ namespace Ten
                 }
                 
                 //ekf
-                curtime = odo.header.stamp.toSec();
+                curtime = odo.header.stamp.toSec(); 
                 double dt = curtime - last_time;
                 //时间是否为负
                 if(dt <= 0.0)
@@ -272,7 +275,7 @@ namespace Ten
                 Ten::PV pose_and_velocity_ekf = ekf_fliter.process(pose_and_velocity_now, dt);
                 //imu
                 error = predict.processImu(lidar_LA._xyz, pose_and_velocity_now.pose._rpy);
-                pose_and_velocity_ekf.pose += error;
+                //pose_and_velocity_ekf.pose += error;
 
                 last_time = curtime;
                 pose = pose_and_velocity_ekf.pose;
@@ -299,15 +302,15 @@ namespace Ten
 
         static bool calibration2()
         {
-            std::string log_path = std::string(ROOT_DIR) + std::string("map/map.pcd");
-            //std::string log_path = std::string("/home/maple/study2/maple/map/map.pcd");
-            Ten::Ten_relocation<pcl::PointXYZI> rel(log_path);
+            static Ten::Ten_logger& log = Ten::Ten_logger::GetInstance(std::string(ROOT_DIR) + std::string("log"));
+            static Ten::Ten_relocation<pcl::PointXYZI> rel(std::string(ROOT_DIR) + std::string("map/map.pcd"));
+            static int num;
             Ten::XYZRPY xyzrpy = rel.get_transformation();
             if(xyzrpy == Ten::XYZRPY())
             {
                 return false;
             }
-
+            num++;
             std::cout << "---------------------------" << std::endl; 
             std::cout << "x: " << xyzrpy._xyz._x << std::endl;
             std::cout << "y: " << xyzrpy._xyz._y << std::endl;
@@ -324,10 +327,12 @@ namespace Ten
             xyzrpy_error._rpy._pitch = _r2_xyzrpy_error_rpy_pitch_;
             xyzrpy_error._rpy._yaw = _r2_xyzrpy_error_rpy_yaw_;
 
+            log.record_XYZRPY(xyzrpy, std::string("relocation") + std::to_string(num));
+
             //Ten::XYZRPY world_origin = Ten::transform_matrixtoXYZRPY(Ten::worldtocurrent(xyzrpy._xyz, xyzrpy._rpy) * Ten::worldtocurrent(xyzrpy_error._xyz, xyzrpy_error._rpy) * Ten::_COORDINATE_TRANSFORMATION_.get_lidartocar());
             Ten::XYZRPY world_origin = Ten::transform_matrixtoXYZRPY(Ten::XYZRPYtotransform_matrix(xyzrpy) * Ten::XYZRPYtotransform_matrix(xyzrpy_error) * Ten::_COORDINATE_TRANSFORMATION_.get_lidartocar());
             Ten::_COORDINATE_TRANSFORMATION_.set_world2toworld1(world_origin);
-            Ten::_PUB_CLOUD_FLAG_.set_flag(0);
+            Ten::_PUB_CLOUD_FLAG_.set_flag(false);
             return true;
         }
 
@@ -335,7 +340,7 @@ namespace Ten
         {
             urcu_memb_register_thread();
             //定义各种数组
-            uint8_t arr[1000] = {0};
+            
 
             //初始化日志
             std::string log_path = std::string(ROOT_DIR) + std::string("log");
@@ -346,11 +351,13 @@ namespace Ten
             Ten::ThreadPool pool(4);
             int pool_request[10] = {0};
             std::vector<std::function<void()>> func_request;
-            func_request.push_back(test_pnp);
+            func_request.push_back(Ten::apriltag_pose_module::serial_send);
+            //func_request.push_back(test_pnp);
 
             //ros::Rate sl(10);
             while(Ten::_TREADPOOL_FLAG_.read_flag())
             {
+                uint8_t arr[1000] = {0};
                 uint8_t frame_id = 0;
                 uint8_t length = 0;
                 if(serial.serial_read(arr, frame_id, length))
@@ -366,25 +373,58 @@ namespace Ten
                         serial.clearBuffer(1);
                         serial.serial_send(result, 5, sizeof(result));       
                     }
-                    if(frame_id == 7) //camera_kfs
+
+                    // std::cout << "frame_id: " << (int)frame_id << std::endl;
+                    // std::cout << "arr[0]: " << (int)(arr[0]) << std::endl;
+
+                    if(frame_id == 6) //武器对接
                     {
                         if(arr[0] == 1)
                         {
                             //如果第一次调用
                             if(pool_request[0] == 0)
                             {
+                                std::cout << "pool_request[0]: " << pool_request[0] << std::endl;
                                 pool.enqueue(func_request[0]);
                             }
                             pool_request[0] = 1;
+                            //uint8_t result[1] = {0};
+                            //serial.serial_send(result, 6, sizeof(result));
                         }
                         else if(arr[0] == 0)
                         {
                             uint8_t result[1] = {0};
-                            Ten::_CAMERA_KFS_FLAG_.set_flag(0);
-                            serial.serial_send(result, 7, sizeof(result)); 
+                            Ten::_APRILTAG_FLAG_.set_flag(0);
+                            serial.serial_send(result, 6, sizeof(result)); 
                             pool_request[0] = 0;
                         }   
                     }
+                    
+                    if(frame_id == 7) //地图
+                    {
+                        Ten::_MAP_FLAG_.set_flag(0);
+                    }
+                    // if(frame_id == 7) //camera_kfs
+                    // {
+                    //     if(arr[0] == 1)
+                    //     {
+                    //         //如果第一次调用
+                    //         if(pool_request[0] == 0)
+                    //         {
+                    //             //pool.enqueue(func_request[0]);
+                    //         }
+                    //         pool_request[0] = 1;
+                    //     }
+                    //     else if(arr[0] == 0)
+                    //     {
+                    //         uint8_t result[1] = {0};
+                    //         Ten::_CAMERA_KFS_FLAG_.set_flag(0);
+                    //         serial.serial_send(result, 7, sizeof(result)); 
+                    //         pool_request[0] = 0;
+                    //     }   
+                    // }
+
+
                 }
                 //sl.sleep();
                 usleep(10*1000);

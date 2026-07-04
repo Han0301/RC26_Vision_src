@@ -10,6 +10,8 @@ namespace Ten
     Ten::ThreadPool_flag _LASERMAPPING_FLAG_;
     Ten::ThreadPool_flag _PUB_CLOUD_FLAG_;
     Ten::ThreadPool_flag _CAMERA_KFS_FLAG_;
+    Ten::ThreadPool_flag _APRILTAG_FLAG_;
+    Ten::ThreadPool_flag _MAP_FLAG_;
     
     /**
      * @brief 将当前调用该函数的线程设置为高优先级（分配更多CPU资源）

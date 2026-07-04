@@ -47,16 +47,28 @@ public:
         @brief 初始化重定位
         @param path: 全局地图点云pcd文件路径
     */
-    Ten_relocation(std::string path)
-    :global_cloud_(new PointCloudT),
-    local_cloud_(new PointCloudT)
+    Ten_relocation(std::string path, std::string path2 = "", std::string path3 = "")
+    :global_cloud_(new PointCloudT)
+    ,global_cloud2_(new PointCloudT)
+    ,local_cloud_(new PointCloudT)
+    ,local_cloud2_(new PointCloudT)
     {
         flag_ = readPCD(path, global_cloud_);
+        flag2_ = readPCD(path2, global_cloud2_) && readPCD(path3, local_cloud2_);
+
         if(flag_ != 0)
         {
-            if(global_cloud_->points.size() == 0)
+            if(global_cloud_->points.size() <= _min_num_of_point_cloud_for_relocation_)
             {
                 flag_ = 0;
+            }
+        }
+
+        if(flag2_ != 0)
+        {
+            if(global_cloud2_->points.size() <= _min_num_of_point_cloud_for_relocation_ || local_cloud2_->points.size() <= _min_num_of_point_cloud_for_relocation2_)
+            {
+                flag2_ = 0;
             }
         }
     }
@@ -66,9 +78,10 @@ public:
 
     /**
      * @brief 获取位姿变换信息，使用前要urcu_memb_register_thread();
+     * @param way: 定位方式，1: 旋转重定位 2: 直接重定位
      * @return Ten::XYZRPY : 世界2到当前世界坐标系的坐标变换
      */
-    Ten::XYZRPY get_transformation()
+    Ten::XYZRPY get_transformation(int way = 1)
     {
         // typename PointCloudT::Ptr local_cloud;
         // int lock = 0;
@@ -106,18 +119,31 @@ public:
             return Ten::XYZRPY();
         }
         local_cloud = Ten::sensor_msgs_PointCloud2topcltype<PointCloudT>(map);   
-        if(local_cloud == nullptr || local_cloud->points.size() <= _min_num_of_point_cloud_for_relocation_)
+        if(local_cloud == nullptr)
         {
-            std::cout<< "local_cloud->points.size()" << local_cloud->points.size() << std::endl;
+            std::cout<< "local_cloud == nullptr" << local_cloud->points.size() << std::endl;
             return Ten::XYZRPY();
         }
 
-        if(flag_ == 0)
-        {
-            return Ten::XYZRPY();
-        }
+        // if(flag_ == 0)
+        // {
+        //     return Ten::XYZRPY();
+        // }
         std::cout<< "local_cloud->points.size()" << local_cloud->points.size() << std::endl;
-        return get_transformation(local_cloud);
+
+        Ten::XYZRPY result;
+
+        if(way == 1 && flag_ != 0 && local_cloud->points.size() >= _min_num_of_point_cloud_for_relocation_)
+        {
+            result = get_transformation(local_cloud);
+        }
+
+        if(way == 2 && flag_ != 0 && flag2_ != 0 && local_cloud->points.size() >= _min_num_of_point_cloud_for_relocation2_)
+        {
+            result = get_transformation2(local_cloud);
+        }
+
+        return result;
     }
 
     /**
@@ -159,6 +185,45 @@ public:
         return Ten::transform_matrixtoXYZRPY(inverse_transform);
     }
 
+    /**
+     * @brief 获取位姿变换信息，使用前要urcu_memb_register_thread();
+     * @param local_cloud： 当前点云
+     * @return Ten::XYZRPY : 世界2到当前世界坐标系的坐标变换
+     */
+    Ten::XYZRPY get_transformation2(typename PointCloudT::Ptr local_cloud)
+    {
+        if(local_cloud->points.size() == 0 || flag_ == 0 || flag2_ == 0)
+        {
+            return Ten::XYZRPY();
+        }
+        //local_cloud_ = local_cloud;
+        local_cloud_ = global_cloud2_;
+        
+        //icp精配准
+        // typename PointCloudT::Ptr local_cloud_raw(new PointCloudT);
+        // pcl::transformPointCloud(*local_cloud, *local_cloud_raw, transform_matrix_raw);
+        // Eigen::Matrix4d transform_matrix_icp = icpRegistration(local_cloud_raw, global_cloud_downsampled);
+        // Eigen::Matrix4d transform_matrix_mix = transform_matrix_icp * transform_matrix_raw;
+        //求逆矩阵
+        //Eigen::Matrix4d inverse_transform = transform_matrix_mix.inverse();
+        Eigen::Matrix4d transform_matrix_raw_3 = process_nano_gicp(local_cloud2_, local_cloud, _voxeldownsample_threshold_for_icp_);
+
+        Eigen::Matrix4d transform_matrix_raw = process_teaser(global_cloud_, local_cloud_, _voxeldownsample_threshold_for_teaser_);
+        typename PointCloudT::Ptr local_cloud_raw(new PointCloudT);
+        pcl::transformPointCloud(*local_cloud, *local_cloud_raw, transform_matrix_raw);
+        // Eigen::Matrix4d transform_matrix_raw_2 = process_teaser(global_cloud_, local_cloud_raw, 0.3);
+        // Eigen::Matrix4d transform_matrix_mix = transform_matrix_raw_2 * transform_matrix_raw;
+
+
+        //Eigen::Matrix4d transform_matrix_raw_2 = process_icp(global_cloud_, local_cloud_raw, 0.5);
+        Eigen::Matrix4d transform_matrix_raw_2 = process_nano_gicp(global_cloud_, local_cloud_raw, _voxeldownsample_threshold_for_icp_);
+        
+        
+
+        Eigen::Matrix4d transform_matrix_mix = transform_matrix_raw_2 * transform_matrix_raw * transform_matrix_raw_3;
+        Eigen::Matrix4d inverse_transform = transform_matrix_mix.inverse();
+        return Ten::transform_matrixtoXYZRPY(inverse_transform);
+    }
 
 private:
 
@@ -343,7 +408,7 @@ private:
         icp.setInputTarget(global_cloud_downsampled);  // 参考的目标点云
 
         // 4. 设置ICP默认核心参数（经典默认值，适配多数场景）
-        icp.setMaximumIterations(100);                // 最大迭代次数
+        icp.setMaximumIterations(300);                // 最大迭代次数
         icp.setTransformationEpsilon(1e-8);          // 收敛阈值（迭代停止条件）
         icp.setMaxCorrespondenceDistance(_setmaxcorrespondencedistance_nano_gicp_);      // 最大对应点距离阈值（单位：m）
         icp.setEuclideanFitnessEpsilon(1e-6);        // 欧式适应度阈值（拟合精度）
@@ -430,8 +495,11 @@ private:
     
 
 typename PointCloudT::Ptr global_cloud_;
+typename PointCloudT::Ptr global_cloud2_;
 typename PointCloudT::Ptr local_cloud_;
+typename PointCloudT::Ptr local_cloud2_;
 int flag_ = 1;
+int flag2_ = 1;
 };
 
 

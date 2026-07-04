@@ -1,10 +1,10 @@
 # ====================== r1 车相对雷达 ======================
-_r1_xyzrpy_car_xyz_x_: -0.465
-_r1_xyzrpy_car_xyz_y_: 0.025        # 0.40944 + 0.088/2
-_r1_xyzrpy_car_xyz_z_: 0.0
+_r1_xyzrpy_car_xyz_x_: 0.40335
+_r1_xyzrpy_car_xyz_y_: 0.431434       # 0.40944 + 0.088/2
+_r1_xyzrpy_car_xyz_z_: -0.40
 _r1_xyzrpy_car_rpy_roll_: 0.0
 _r1_xyzrpy_car_rpy_pitch_: 0.0
-_r1_xyzrpy_car_rpy_yaw_: -1.57079632679   # -PI/2
+_r1_xyzrpy_car_rpy_yaw_: 0.0   # -PI/2
 
 # ====================== r1 建图误差 ======================
 _r1_xyzrpy_error_xyz_x_: 0.025
@@ -20,17 +20,17 @@ _r1_xyzrpy_init_error_xyz_x_: 0.0
 _r1_xyzrpy_init_error_xyz_y_: 0.0
 _r1_xyzrpy_init_error_xyz_z_: 0.0
 _r1_xyzrpy_init_error_rpy_roll_: 0.0
-_r1_xyzrpy_init_error_rpy_pitch_: 0.523133
+_r1_xyzrpy_init_error_rpy_pitch_: 0.0
 _r1_xyzrpy_init_error_rpy_yaw_: 0.0
 
 
 # ====================== r2 车相对雷达 ======================
-_r2_xyzrpy_car_xyz_x_:  0.3304      # 0.338        #0.317327
-_r2_xyzrpy_car_xyz_y_:  -0.0199     #0.0253          #0.0253            #0.022
-_r2_xyzrpy_car_xyz_z_:  0.763     #-0.788
+_r2_xyzrpy_car_xyz_x_: 0.27839    # 0.338        #0.317327
+_r2_xyzrpy_car_xyz_y_:  0.00465     #0.0253          #0.0253            #0.022
+_r2_xyzrpy_car_xyz_z_: 0.771     #-0.788
 _r2_xyzrpy_car_rpy_roll_: 0.0
 _r2_xyzrpy_car_rpy_pitch_: 0.0
-_r2_xyzrpy_car_rpy_yaw_: 0.0
+_r2_xyzrpy_car_rpy_yaw_: -0.04
 
 # ====================== r2 建图误差 ======================
 _r2_xyzrpy_error_xyz_x_: 0.025
@@ -46,7 +46,7 @@ _r2_xyzrpy_init_error_xyz_x_: 0.0
 _r2_xyzrpy_init_error_xyz_y_: 0.0
 _r2_xyzrpy_init_error_xyz_z_: 0.0
 _r2_xyzrpy_init_error_rpy_roll_: 0.0
-_r2_xyzrpy_init_error_rpy_pitch_: -0.5227889
+_r2_xyzrpy_init_error_rpy_pitch_: 0.0
 _r2_xyzrpy_init_error_rpy_yaw_: 0.0
 
 
@@ -70,6 +70,7 @@ _voxeldownsample_threshold_for_teaser_: 0.3
 _voxeldownsample_threshold_for_icp_: 0.5
 _setmaxcorrespondencedistance_nano_gicp_: 0.60
 _min_num_of_point_cloud_for_relocation_: 20000
+_min_num_of_point_cloud_for_relocation2_: 10000
 
 #=============建图下采样参数===================
 _voxeldownsample_threshold_: 0.3
@@ -117,17 +118,60 @@ _q_ang_: 0.03
 
 # ====================== 雷达自己的初始误差 ======================
 
-_lidar_xyzrpy_init_error_xyz_x_: 0.01550518
-_lidar_xyzrpy_init_error_xyz_y_: 0.01867163
+_lidar_xyzrpy_init_error_xyz_x_: 0.0 #0.01550518
+_lidar_xyzrpy_init_error_xyz_y_: 0.0 #0.01867163
 _lidar_xyzrpy_init_error_xyz_z_: 0
 _lidar_xyzrpy_init_error_rpy_roll_: 0
 _lidar_xyzrpy_init_error_rpy_pitch_: 0
 _lidar_xyzrpy_init_error_rpy_yaw_: 0
 
-#camera_kfs
-_camera_x_bias_: 0.0
-_camera_y_bias_: 0.0
-_camera_z_bias_: 0.0
-_max_bias_: 0.0
+# #camera_kfs
+# _camera_x_bias_: 0.0
+# _camera_y_bias_: 0.0
+# _camera_z_bias_: 0.0
+# _max_bias_: 0.0
 
+#AprilTag 参数
+APRILTAG_FX: 603.70866605
+APRILTAG_FY: 602.75542134
+APRILTAG_CX: 328.76609402
+APRILTAG_CY: 232.37643764
+APRILTAG_K1: 0.09239455
+APRILTAG_K2: -0.16531614
+APRILTAG_P1: 0.00322926
+APRILTAG_P2: 0.00042834
+APRILTAG_K3: 0.0
+APRILTAG_CAMERA_WIDTH: 640
+APRILTAG_CAMERA_HEIGHT: 480
+APRILTAG_CAMERA_FPS: 60
+APRILTAG_TAG_SIZE: 0.0155
+APRILTAG_TAG_SPACING: 0.006
+APRILTAG_QUAD_DECIMATE: 1.0
+APRILTAG_QUAD_SIGMA: 0.0
+APRILTAG_NTHREADS: 1
+APRILTAG_REFINE_EDGES: true
+APRILTAG_PRIMARY_ID: 7
+APRILTAG_AUX_ID: 24 
+APRILTAG_SINGLE_TAG_MODE: false
+APRILTAG_SINGLE_TAG_ID: 24
+APRILTAG_FUSION_BIAS_X: -0.1
+APRILTAG_FUSION_BIAS_Y: -0.066
+APRILTAG_FUSION_BIAS_Z: 0.0
+APRILTAG_WORLD_BIAS_X: 0.0
+APRILTAG_WORLD_BIAS_Y: -0.05745
+APRILTAG_WORLD_BIAS_Z: -0.0622
+APRILTAG_JUMP_WINDOW: 100
+APRILTAG_YAW_EMA_ALPHA: 0.35
+APRILTAG_ENABLE_SAW_WINDOW: false
+APRILTAG_DRAW_FONT_SCALE: 0.5
+APRILTAG_DRAW_THICKNESS: 1
+APRILTAG_SAW_WINDOW_NAME: saw
+
+_usb_device_num1_: 2
+_usb_device_num2_: 4
+_usb_device_num3_: 6
+
+_imu_q_pos_: 0.001
+_imu_q_att_: 0.0001
+_imu_q_vel_: 0.01
 

@@ -2,6 +2,7 @@
 #define __WORLD_TO_CAMERA_H_
 
 #include "./../method_math.h"
+#include "./../method_math_new.h"
 #include "camera_calibration.h"
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -56,6 +57,20 @@ namespace Ten
         {
             std::lock_guard<std::mutex> lock(mtx_);
             Eigen::Matrix4d T2 = XYZRPYtotransform_matrix(worldtocurrent_- error_);
+            Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
+            Eigen::Matrix4d T1 = camerainfo_.extrinsic();
+            Eigen::Matrix4d mix = T1 * T2 * T3;
+            return mix;
+        }
+
+        /**
+         * @brief 车相对于世界坐标的位姿
+         * @param Ten::XYZRPY: 车相对于世界坐标的位姿
+         */
+        Eigen::Matrix4d getXYZRPY_matrix2()
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            Eigen::Matrix4d T2 = Ten::math::XYZRPYtotransform_matrix_fixed(worldtocurrent_).inverse();
             Eigen::Matrix4d T3 = XYZRPYtotransform_matrix(world2toworld1_);
             Eigen::Matrix4d T1 = camerainfo_.extrinsic();
             Eigen::Matrix4d mix = T1 * T2 * T3;

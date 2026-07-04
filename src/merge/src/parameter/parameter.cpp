@@ -121,7 +121,7 @@ namespace Ten
     double _voxeldownsample_threshold_for_icp_ = 0.0;
     double _setmaxcorrespondencedistance_nano_gicp_ = 0.0;
     size_t _min_num_of_point_cloud_for_relocation_ = 0;
-
+    size_t _min_num_of_point_cloud_for_relocation2_ = 0;
     
     //#define _voxeldownsample_threshold_ 0.3
     //point_lio建图下采样深度
@@ -156,10 +156,64 @@ namespace Ten
     double _lidar_xyzrpy_init_error_rpy_pitch_ = 0;
     double _lidar_xyzrpy_init_error_rpy_yaw_ = 0.0;
 
-    //camera_kfs
-    double _camera_x_bias_ = 0;
-    double _camera_y_bias_ = 0;
-    double _camera_z_bias_ = 0;
-    double _max_bias_  = 0.2;
+    // //camera_kfs
+    // double _camera_x_bias_ = 0;
+    // double _camera_y_bias_ = 0;
+    // double _camera_z_bias_ = 0;
+    // double _max_bias_  = 0.2;
+
+    // ==============================================
+    // AprilTag 全局变量声明
+    // ==============================================
+    double APRILTAG_FX = 0.0;
+    double APRILTAG_FY = 0.0;
+    double APRILTAG_CX = 0.0;
+    double APRILTAG_CY = 0.0;
+    double APRILTAG_K1 = 0.0;
+    double APRILTAG_K2 = 0.0;
+    double APRILTAG_P1 = 0.0;
+    double APRILTAG_P2 = 0.0;
+    double APRILTAG_K3 = 0.0;
+
+    int APRILTAG_CAMERA_WIDTH = 0;
+    int APRILTAG_CAMERA_HEIGHT = 0;
+    int APRILTAG_CAMERA_FPS = 0;
+
+    double APRILTAG_TAG_SIZE = 0.0;
+    double APRILTAG_TAG_SPACING = 0.0;
+    double APRILTAG_QUAD_DECIMATE = 0.0;
+    double APRILTAG_QUAD_SIGMA = 0.0;
+    int APRILTAG_NTHREADS = 0;
+    bool APRILTAG_REFINE_EDGES = false;
+
+    int APRILTAG_PRIMARY_ID = 0;
+    int APRILTAG_AUX_ID = 0;
+    bool APRILTAG_SINGLE_TAG_MODE = false;
+    int APRILTAG_SINGLE_TAG_ID = 0;
+    double APRILTAG_FUSION_BIAS_X = 0.0;
+    double APRILTAG_FUSION_BIAS_Y = 0.0;
+    double APRILTAG_FUSION_BIAS_Z = 0.0;
+
+    double APRILTAG_WORLD_BIAS_X = 0.0;
+    double APRILTAG_WORLD_BIAS_Y = 0.0;
+    double APRILTAG_WORLD_BIAS_Z = 0.0;
+
+    int APRILTAG_JUMP_WINDOW = 0;
+    double APRILTAG_YAW_EMA_ALPHA = 0.0;
+
+    bool APRILTAG_ENABLE_SAW_WINDOW = false;
+    double APRILTAG_DRAW_FONT_SCALE = 0.0;
+    int APRILTAG_DRAW_THICKNESS = 0;
+    std::string APRILTAG_SAW_WINDOW_NAME = "";
+
+    int _usb_device_num1_ = 0;
+    int _usb_device_num2_ = 0;
+    int _usb_device_num3_ = 0;
+
+    //imuekf
+    double _imu_q_pos_   = 0;   // 位置过程噪声系数
+    double _imu_q_att_   = 0;   // 姿态过程噪声系数
+    double _imu_q_vel_   = 0;   // 线速度过程噪声系数
+
 
 }

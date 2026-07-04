@@ -207,7 +207,35 @@ void calibration2()
     Ten::Ten_relocation<pcl::PointXYZI> rel(log_path);
     Ten::XYZRPY xyzrpy = rel.get_transformation();
 
-    std::cout << "---------------------------" << std::endl; 
+    std::cout << "-------------get_transformation--------------" << std::endl; 
+    std::cout << "x: " << xyzrpy._xyz._x << std::endl;
+    std::cout << "y: " << xyzrpy._xyz._y << std::endl;
+    std::cout << "z: " << xyzrpy._xyz._z << std::endl;
+    std::cout << "roll: " << xyzrpy._rpy._roll << std::endl;
+    std::cout << "pitch: " << xyzrpy._rpy._pitch << std::endl;
+    std::cout << "yaw: " << xyzrpy._rpy._yaw << std::endl;
+
+    Ten::XYZRPY xyzrpy_error;
+    // xyzrpy_error._xyz._x = Ten::superstratum::_r2_xyzrpy_error_xyz_x_;
+    // xyzrpy_error._xyz._y = Ten::superstratum::_r2_xyzrpy_error_xyz_y_;
+    // xyzrpy_error._xyz._z = Ten::superstratum::_r2_xyzrpy_error_xyz_z_;
+    // xyzrpy_error._rpy._roll = Ten::superstratum::_r2_xyzrpy_error_rpy_roll_;
+    // xyzrpy_error._rpy._pitch = Ten::superstratum::_r2_xyzrpy_error_rpy_pitch_;
+    // xyzrpy_error._rpy._yaw = Ten::superstratum::_r2_xyzrpy_error_rpy_yaw_;
+    Ten::XYZRPY world_origin = Ten::transform_matrixtoXYZRPY(Ten::XYZRPYtotransform_matrix(xyzrpy) * Ten::XYZRPYtotransform_matrix(xyzrpy_error) * Ten::_COORDINATE_TRANSFORMATION_.get_lidartocar());
+    Ten::_COORDINATE_TRANSFORMATION_.set_world2toworld1(world_origin);
+}
+
+void calibration3()
+{
+    std::string log_path = std::string(ROOT_DIR) + std::string("map/map.pcd");
+    std::string log_path2 = std::string(ROOT_DIR) + std::string("map/map2.pcd");
+    std::string log_path3 = std::string(ROOT_DIR) + std::string("map/map3.pcd");
+    //std::string log_path = std::string("/home/maple/study2/maple/map/map.pcd");
+    Ten::Ten_relocation<pcl::PointXYZI> rel(log_path, log_path2, log_path3);
+    Ten::XYZRPY xyzrpy = rel.get_transformation(2);
+
+    std::cout << "-----------get_transformation----------------" << std::endl; 
     std::cout << "x: " << xyzrpy._xyz._x << std::endl;
     std::cout << "y: " << xyzrpy._xyz._y << std::endl;
     std::cout << "z: " << xyzrpy._xyz._z << std::endl;
@@ -235,7 +263,7 @@ void test_input()
         if(flag == 1)
         {
             std::cout<< "flag == 1" << std::endl;
-            calibration2();
+            calibration3();
         }
         else if(flag == 0)
         {
@@ -813,23 +841,23 @@ void test_lidar_point_lio_imu2()
     int num = Ten::_laser_pub_hz_;
     std::cout << "num: " << num << std::endl;
 
-    Ten::XYZRPY xyzrpy_error;
-    xyzrpy_error._xyz._x = Ten::superstratum::_r2_xyzrpy_init_error_xyz_x_;
-    xyzrpy_error._xyz._y = Ten::superstratum::_r2_xyzrpy_init_error_xyz_y_;
-    xyzrpy_error._xyz._z = Ten::superstratum::_r2_xyzrpy_init_error_xyz_z_;
-    xyzrpy_error._rpy._roll = Ten::superstratum::_r2_xyzrpy_init_error_rpy_roll_;
-    xyzrpy_error._rpy._pitch = Ten::superstratum::_r2_xyzrpy_init_error_rpy_pitch_;
-    xyzrpy_error._rpy._yaw = Ten::superstratum::_r2_xyzrpy_init_error_rpy_yaw_;
-    Ten::_COORDINATE_TRANSFORMATION_.set_stead_state_error(xyzrpy_error);
+    // Ten::XYZRPY xyzrpy_error;
+    // xyzrpy_error._xyz._x = Ten::superstratum::_r2_xyzrpy_init_error_xyz_x_;
+    // xyzrpy_error._xyz._y = Ten::superstratum::_r2_xyzrpy_init_error_xyz_y_;
+    // xyzrpy_error._xyz._z = Ten::superstratum::_r2_xyzrpy_init_error_xyz_z_;
+    // xyzrpy_error._rpy._roll = Ten::superstratum::_r2_xyzrpy_init_error_rpy_roll_;
+    // xyzrpy_error._rpy._pitch = Ten::superstratum::_r2_xyzrpy_init_error_rpy_pitch_;
+    // xyzrpy_error._rpy._yaw = Ten::superstratum::_r2_xyzrpy_init_error_rpy_yaw_;
+    // Ten::_COORDINATE_TRANSFORMATION_.set_stead_state_error(xyzrpy_error);
 
-    Ten::XYZRPY xyzrpy_car;
-    xyzrpy_car._xyz._x = Ten::superstratum::_r2_xyzrpy_car_xyz_x_;
-    xyzrpy_car._xyz._y = Ten::superstratum::_r2_xyzrpy_car_xyz_y_;
-    xyzrpy_car._xyz._z = Ten::superstratum::_r2_xyzrpy_car_xyz_z_;
-    xyzrpy_car._rpy._roll = Ten::superstratum::_r2_xyzrpy_car_rpy_roll_;
-    xyzrpy_car._rpy._pitch = Ten::superstratum::_r2_xyzrpy_car_rpy_pitch_;
-    xyzrpy_car._rpy._yaw = Ten::superstratum::_r2_xyzrpy_car_rpy_yaw_;
-    Ten::_COORDINATE_TRANSFORMATION_.set_lidartocar(xyzrpy_car); 
+    // Ten::XYZRPY xyzrpy_car;
+    // xyzrpy_car._xyz._x = Ten::superstratum::_r2_xyzrpy_car_xyz_x_;
+    // xyzrpy_car._xyz._y = Ten::superstratum::_r2_xyzrpy_car_xyz_y_;
+    // xyzrpy_car._xyz._z = Ten::superstratum::_r2_xyzrpy_car_xyz_z_;
+    // xyzrpy_car._rpy._roll = Ten::superstratum::_r2_xyzrpy_car_rpy_roll_;
+    // xyzrpy_car._rpy._pitch = Ten::superstratum::_r2_xyzrpy_car_rpy_pitch_;
+    // xyzrpy_car._rpy._yaw = Ten::superstratum::_r2_xyzrpy_car_rpy_yaw_;
+    // Ten::_COORDINATE_TRANSFORMATION_.set_lidartocar(xyzrpy_car); 
 
     Ten::PoseVelocityKalmanFilter ekf_fliter;
     Ten::PV pose_and_velocity_now;
@@ -903,10 +931,13 @@ void test_lidar_point_lio_imu2()
 
 
         Ten::PV pose_and_velocity_ekf = ekf_fliter.process(pose_and_velocity_now, dt);
+        pose_and_velocity_now = pose_and_velocity_ekf;
+        
         last_time = curtime;
         error = predict.processImu(lidar_LA._xyz, pose_and_velocity_now.pose._rpy);
         pose_and_velocity_ekf.pose += error;
-        //pose = pose_and_velocity_ekf.pose;
+        
+        pose = pose_and_velocity_ekf.pose;
         lidar_LA = pose_and_velocity_ekf.velocity;
 
         Ten::_COORDINATE_TRANSFORMATION_.set_worldtolidar(pose);
@@ -923,6 +954,18 @@ void test_lidar_point_lio_imu2()
         
         if(num <= 0)
         {
+            std::cout << "--------------pose_and_velocity_now.pose----------" << std::endl;
+
+            std::cout << "x: " << pose_and_velocity_now.pose._xyz._x << std::endl;
+            std::cout << "y: " << pose_and_velocity_now.pose._xyz._y << std::endl;
+            std::cout << "z: " << pose_and_velocity_now.pose._xyz._z << std::endl;
+
+            std::cout << "roll: " << pose_and_velocity_now.pose._rpy._roll << std::endl;
+            std::cout << "pitch: " << pose_and_velocity_now.pose._rpy._pitch << std::endl;
+            std::cout << "yaw: " << pose_and_velocity_now.pose._rpy._yaw << std::endl;
+
+            std::cout << "--------------pose_and_velocity_now.pose----------" << std::endl;
+
             std::cout << "--------------pose_and_velocity_ekf.pose----------" << std::endl;
 
             std::cout << "x: " << pose_and_velocity_ekf.pose._xyz._x << std::endl;
@@ -956,7 +999,7 @@ void test_lidar_point_lio_imu2()
         ros::Time new_stamp = stamp + ros::Duration(0.1);
 
         publishOdometryFromPVraw(pose_and_velocity_now, stamp);
-        publishOdometryFromPVekf(pose_and_velocity_ekf, stamp);
+        publishOdometryFromPVekf(pose_and_velocity_ekf, new_stamp);
         sll.sleep();
     }
 
