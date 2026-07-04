@@ -103,7 +103,7 @@ int main(int argc, char **argv)
     //3. 注册自定义SIGINT信号处理函数（替换默认处理）
     signal(SIGINT, sigintHandler);
 
-    Ten::Ten_lidar::GetInstance("/home/h/RC2026/merge_ws21/src/merge/src/livox_ros_driver2/config/MID360_config.json", kLivoxCustomMsg, 100.0);
+    Ten::Ten_lidar::GetInstance("/home/h/RC2026/merge_ws22/src/merge/src/livox_ros_driver2/config/MID360_config.json");
     Ten::ThreadPool pool(1);
     pool.enqueue(zbuffer);
     laserMapping();

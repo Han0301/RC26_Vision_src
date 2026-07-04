@@ -233,7 +233,7 @@ void zbuffer()
     image_transport::Publisher pub_img = it.advertise("pub_image_topic", 2);
     //初始化相机
     Ten::Ten_camera& camera =  Ten::Ten_camera::GetInstance();
-    Ten::Ten_logger& log = Ten::Ten_logger::GetInstance("/home/h/RC2026/merge_ws21/src/merge/log");
+    Ten::Ten_logger& log = Ten::Ten_logger::GetInstance("/home/h/rc26_log/log");
     //初始化yolo11-cls
     int arr[31] = {1, 10, 11, 12, 13, 14, 15, 16, 17,18, 19, 2 ,20 ,21 ,22 ,23 ,24, 25 ,26 ,27 ,28 ,29, 3 ,30, 31, 4 ,5 ,6, 7, 8 ,9};
     std::vector<int> map;
@@ -266,7 +266,7 @@ void zbuffer()
     std::cout<< "tevc: " << Ten::_CAMERA_TRANSFORMATION_.camerainfo_.tevc() << std::endl;
 
     //重定位
-    std::cout << "-----------------------是否重定位--------------------------"<<std::endl;
+    std::cout << "-----------------------是否重定位---  -----------------------"<<std::endl;
     //sleep(20);
     string input;
     std::cin >> input;
@@ -313,21 +313,20 @@ void zbuffer()
     Ten::_CAMERA_TRANSFORMATION_.set_worldtolidar(tf);
     Ten::_CAMERA_TRANSFORMATION_.set_error(error);
 
-    Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(Ten::_INIT_3D_BOX_.pcl_LS_plum_object_points_, 
-        Ten::_INIT_3D_BOX_.pcl_C_plum_object_points_, Ten::_INIT_3D_BOX_.object_plum_points);
-    Ten::_INIT_3D_BOX_.split_2d_points();
+        //坐标变换
+        Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(Ten::_INIT_3D_BOX_.pcl_LM_plum_object_points_, 
+            Ten::_INIT_3D_BOX_.pcl_C_plum_object_points_, Ten::_INIT_3D_BOX_.object_plum_2d_points_);
+        //转pcl到C
+        Ten::_INIT_3D_BOX_.pcl_to_C();
 
-    Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_init(Ten::_INIT_3D_BOX_.C_object_points_, Ten::_INIT_3D_BOX_.C_plum_points_, 
-        Ten::_INIT_3D_BOX_.object_2d_points, Ten::_INIT_3D_BOX_.plum_2d_points,
-        Ten::_INIT_3D_BOX_.object_2d_points_, Ten::_INIT_3D_BOX_.plum_2d_points_);
-
-    Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_(image,  Ten::_INIT_3D_BOX_.object_2d_points_, 
-        Ten::_INIT_3D_BOX_.plum_2d_points_ ,Ten::_INIT_3D_BOX_.box_lists_);
+        Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_(image, Ten::_INIT_3D_BOX_.C_object_plum_points_, 
+        Ten::_INIT_3D_BOX_.object_plum_2d_points_ ,Ten::_INIT_3D_BOX_.box_lists_);
 
     //模型初步筛选
     int _debug_count_zbuffer_flag_z_size = 0;
     int _debug_count_zbuffer_flag_o_size = 0;
     std::vector<Ten::box>& box_lists = Ten::_INIT_3D_BOX_.box_lists_;
+    std::vector<Ten::score>& score_lists = Ten::_INIT_3D_BOX_.score_lists_;
     for(int i = 0; i < box_lists.size(); i++)
     {
         if(box_lists[i].zbuffer_flag == 1)
@@ -352,7 +351,7 @@ void zbuffer()
     std::cout<< "_debug_count_zbuffer_flag_z_size: "<< _debug_count_zbuffer_flag_z_size << std::endl;
     std::cout<< "_debug_count_zbuffer_flag_o_size: "<< _debug_count_zbuffer_flag_o_size << std::endl;
     //用比较好的图像初始化standard_hsv
-    Ten::_ZBUFFER_SIMPLIFY_.set_standard_hsv_(box_lists);
+    Ten::_ZBUFFER_SIMPLIFY_.set_hsv_topn_stand(Ten::_INIT_3D_BOX_.box_lists_, Ten::_INIT_3D_BOX_.score_lists_,5);
     log.record_image(Ten::_INIT_3D_BOX_.box_lists_);
     //sleep(3);
     ros::Rate sl(10);
@@ -376,27 +375,36 @@ void zbuffer()
         //设置世界到雷达
         Ten::_CAMERA_TRANSFORMATION_.set_worldtolidar(tf);
         //坐标变换
-        Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(Ten::_INIT_3D_BOX_.pcl_LS_plum_object_points_, 
-            Ten::_INIT_3D_BOX_.pcl_C_plum_object_points_, Ten::_INIT_3D_BOX_.object_plum_points);
-        //拆分
-        Ten::_INIT_3D_BOX_.split_2d_points();
+        Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(Ten::_INIT_3D_BOX_.pcl_LM_plum_object_points_, 
+            Ten::_INIT_3D_BOX_.pcl_C_plum_object_points_, Ten::_INIT_3D_BOX_.object_plum_2d_points_);
+        //转pcl到C
+        Ten::_INIT_3D_BOX_.pcl_to_C();
 
-
-
-        //初始化zb用的数据
-        Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_init(Ten::_INIT_3D_BOX_.C_object_points_, Ten::_INIT_3D_BOX_.C_plum_points_, 
-            Ten::_INIT_3D_BOX_.object_2d_points, Ten::_INIT_3D_BOX_.plum_2d_points,
-            Ten::_INIT_3D_BOX_.object_2d_points_, Ten::_INIT_3D_BOX_.plum_2d_points_);
-
-        //zb
-        Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_(image_in,  Ten::_INIT_3D_BOX_.object_2d_points_, 
-            Ten::_INIT_3D_BOX_.plum_2d_points_ ,Ten::_INIT_3D_BOX_.box_lists_);
-        std::vector<Ten::box>& box_lists = Ten::_INIT_3D_BOX_.box_lists_;
+        Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_(image, Ten::_INIT_3D_BOX_.C_object_plum_points_, 
+        Ten::_INIT_3D_BOX_.object_plum_2d_points_ ,Ten::_INIT_3D_BOX_.box_lists_);
 
         //判断空
-        Ten::_ZBUFFER_SIMPLIFY_.set_HSV_exist_boxes_(box_lists);
+        Ten::_ZBUFFER_SIMPLIFY_.set_hsv_topn_score(Ten::_INIT_3D_BOX_.box_lists_, Ten::_INIT_3D_BOX_.score_lists_,5);
 
-        
+        for(int i = 0;i < Ten::_INIT_3D_BOX_.score_lists_.size(); i ++)
+        {
+            std::cout << "idx : "<< Ten::_INIT_3D_BOX_.score_lists_[i].idx << ", score: " << Ten::_INIT_3D_BOX_.score_lists_[i].hsv_score << std::endl; 
+
+            if (Ten::_INIT_3D_BOX_.score_lists_[i].hsv_score  < 0){
+                continue;
+            }
+            std::cout << "set_hsv_topn_stand(5): " << Ten::_ZBUFFER_SIMPLIFY_.get_standard_hsv_()[0] << "  " << Ten::_ZBUFFER_SIMPLIFY_.get_standard_hsv_()[1] << "  " << Ten::_ZBUFFER_SIMPLIFY_.get_standard_hsv_()[2] << "  "<< std::endl;
+            for(int j = 0; j < 5; j++ )
+            {
+                std::cout << "    j:"<< j << std::endl;
+                std::cout << "   top_n_h: "<<Ten::_INIT_3D_BOX_.score_lists_[i].top_n_h[j].position << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_h[j].count
+                        << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_h[j].degree_of_promacy << std::endl;
+                std::cout << "   top_n_s: "<<Ten::_INIT_3D_BOX_.score_lists_[i].top_n_s[j].position << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_s[j].count
+                        << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_s[j].degree_of_promacy << std::endl;
+                std::cout << "   top_n_v: "<<Ten::_INIT_3D_BOX_.score_lists_[i].top_n_v[j].position << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_v[j].count
+                        << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_v[j].degree_of_promacy << std::endl;
+            }
+        } 
 
 
         //模型初步筛选
@@ -451,17 +459,14 @@ void zbuffer()
 
         //发布调试图像
         cv::Mat debug_best_roi_image = cv::Mat::zeros(480, 640, CV_8UC3);
-        Ten::_ZBUFFER_SIMPLIFY_.set_debug_roi_image(box_lists, debug_best_roi_image);
+        Ten::_ZBUFFER_SIMPLIFY_.set_debug_roi_image(box_lists, score_lists, debug_best_roi_image);
         sensor_msgs::ImagePtr pub_debug_roi_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", debug_best_roi_image).toImageMsg();
         //调试图像
         //Ten::debug_draw_img(image_in, Ten::_INIT_3D_BOX_.object_2d_points);
-        cv::Mat debug_raw_img = Ten::_ZBUFFER_SIMPLIFY_.update_debug_image(image_in, Ten::_INIT_3D_BOX_.object_2d_points_);
-        sensor_msgs::ImagePtr pub_debug_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", debug_raw_img).toImageMsg();
+        //Ten::debug_draw_img(image_in, Ten::_INIT_3D_BOX_.object_plum_2d_points_);
+        sensor_msgs::ImagePtr pub_debug_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image_in).toImageMsg();
         debug_roi_pub.publish(pub_debug_roi_msg);
         pub_img.publish(pub_debug_img_msg);
-
-        // cv::imshow("img", debug_raw_img);
-        // cv::waitkey(30);
 
         int cout = 0;
         for(int i = 0; i < 12; i++)

@@ -110,8 +110,8 @@ namespace Ten
             bool result2 = 0;
             for(size_t i = 0; i < box_list.size(); i++)
             {
-                std::string savePath = directory_ + std::string("/image/") + std::string("image") + std::to_string(directory_num) + std::string("/") + std::string("idx") + std::to_string(box_list[i].idx) + 
-                std::string("cls") + std::to_string(box_list[i].cls) + std::string("conf") + std::to_string(box_list[i].confidence)+std::string(".png");
+                std::string savePath = directory_ + std::string("/image/") + std::string("image") + std::to_string(directory_num) + std::string("/") + std::string("idx") + std::to_string(box_list[i].idx)
+                                         + std::string("cls") + std::to_string(box_list[i].cls) + std::string("conf") + std::to_string(box_list[i].confidence)+ std::string(".png");
                 std::string savePath_debug = directory_ + std::string("/image/") + std::string("image") + std::to_string(directory_num) + std::string("/")+ std::string("hsv") + std::to_string(box_list[i].idx)+std::string(".png");
                 result = cv::imwrite(savePath, box_list[i].roi_image, png_params);
                 cv::Mat img = bgr_color_analysis(box_list[i].roi_image);
