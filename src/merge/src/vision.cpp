@@ -1,6 +1,6 @@
 #ifndef __VISION_CPP_
 #define __VISION_CPP_
-
+#include <filesystem> 
 
 
 
@@ -9,7 +9,9 @@
 #include "test2.cpp"
 #include "./lidar/lidar_recognition.h"
 #include "./lidar/lidar_getttf.h"
-
+#include "./superstratum/super2.h"
+#include "./yolo/yolo_han2.h"
+#include "./superstratum/super_post.h"
 void orb_test()
 {
     urcu_memb_register_thread();
@@ -255,17 +257,16 @@ void test_calibration()
     // -0.045364,  0.00638342,  -0.99895,  0.36517,  
     // 0.995809,  -0.0792079,  -0.0457275,  0.511095,  
     // 0.0         ,  0.0        ,  0.0        ,  1.0;
-    // transform_matrix << 
-    // -0.0520106,  -0.998646,  0.000310088,  0.0206641,  
-    // -0.0471048,  0.00214311,  -0.998888,  0.396765,  
-    // 0.997535,  -0.0519674,  -0.0471525,  0.50734,  
-    // 0.0         ,  0.0        ,  0.0        ,  1.0;       
     transform_matrix << 
-    -0.0293067,  -0.999359,  -0.0205564,  0.0519757,  
-    0.0195515,  0.0199882,  -0.999609,  0.47424,  
-    0.999379,  -0.0296971,  0.0189532,  0.336381,  
-    0.0         ,  0.0        ,  0.0        ,  1.0; 
-
+    -0.0520106,  -0.998646,  0.000310088,  0.0206641,  
+    -0.0471048,  0.00214311,  -0.998888,  0.396765,  
+    0.997535,  -0.0519674,  -0.0471525,  0.50734,  
+    0.0         ,  0.0        ,  0.0        ,  1.0;       
+    // transform_matrix << 
+    // -0.3604660019990012, -0.9327274936662253, -0.01054232405035172, -0.1925323065106992,
+    // -0.0187131608920804, 0.01884208080016441, -0.9996527300479487, 1.276118837278884,
+    // 0.9326554400306272, -0.3601226221014218, -0.02406803574247084, -0.02044681669899173,
+    // 0, 0, 0, 1;
     Ten::_CAMERA_TRANSFORMATION_.camerainfo_.set_K(K);
     Ten::_CAMERA_TRANSFORMATION_.camerainfo_.set_Extrinsic_Matrix(transform_matrix);
     ros::Rate sl(10);
@@ -278,23 +279,15 @@ void test_calibration()
         //读取图片
         cv::Mat image_in = camera.camera_read();
         Ten::XYZRPY tf = Ten::Nav_Odometrytoxyzrpy(Ten::_TF_GET_.read_data());
-        //打印tf信息
-        // std::cout << "---------------------------" << std::endl; 
-        // std::cout << "x: " << tf._xyz._x << std::endl;
-        // std::cout << "y: " << tf._xyz._y << std::endl;
-        // std::cout << "z: " << tf._xyz._z << std::endl;
-        // std::cout << "roll: " << tf._rpy._roll << std::endl;
-        // std::cout << "pitch: " << tf._rpy._pitch << std::endl;
-        // std::cout << "yaw: " << tf._rpy._yaw << std::endl;
         //设置世界到雷达
         Ten::_CAMERA_TRANSFORMATION_.set_worldtolidar(tf);
         Eigen::Matrix4d world_to_camera_test =  Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(world_point.pcl_LM_plum_object_points_, world_point.pcl_C_plum_object_points_, world_point.object_plum_2d_points_);
-        if(debug_num >= 10)
-        {
-            std::cout << "world_to_camera_test: " << std::endl;
-            std::cout << world_to_camera_test << std::endl;
-            debug_num = 0;
-        }
+        // if(debug_num >= 10)
+        // {
+        //     std::cout << "world_to_camera_test: " << std::endl;
+        //     std::cout << world_to_camera_test << std::endl;
+        //     debug_num = 0;
+        // }
         debug_num++;
         world_point.pcl_to_C();
         zbuffer.set_box_lists_(image_in, world_point.C_object_plum_points_, world_point.object_plum_2d_points_, world_point.box_lists_);
@@ -759,38 +752,15 @@ void vision_lidarR1()
     
     urcu_memb_unregister_thread();
 }
-void vision_calibration3()
-{
-    std::string log_path = std::string(ROOT_DIR) + std::string("map/map.pcd");
-    //std::string log_path = std::string("/home/maple/study2/maple/map/map.pcd");
-    Ten::Ten_relocation<pcl::PointXYZI> rel(log_path);
-    Ten::XYZRPY xyzrpy = rel.get_transformation();
-
-    std::cout << "---------------------------" << std::endl; 
-    std::cout << "x: " << xyzrpy._xyz._x << std::endl;
-    std::cout << "y: " << xyzrpy._xyz._y << std::endl;
-    std::cout << "z: " << xyzrpy._xyz._z << std::endl;
-    std::cout << "roll: " << xyzrpy._rpy._roll << std::endl;
-    std::cout << "pitch: " << xyzrpy._rpy._pitch << std::endl;
-    std::cout << "yaw: " << xyzrpy._rpy._yaw << std::endl;
-
-    Ten::XYZRPY xyzrpy_error;
-    xyzrpy_error._xyz._x = 0.025;
-    xyzrpy_error._xyz._y = -0.045;
-    xyzrpy_error._xyz._z = 0.10;
-    xyzrpy_error._rpy._roll = 0;
-    xyzrpy_error._rpy._pitch = 0;
-    xyzrpy_error._rpy._yaw = 0;
-
-    Ten::XYZRPY world_origin = Ten::transform_matrixtoXYZRPY(Ten::worldtocurrent(xyzrpy._xyz, xyzrpy._rpy) * Ten::worldtocurrent(xyzrpy_error._xyz, xyzrpy_error._rpy) * Ten::_COORDINATE_TRANSFORMATION_.get_lidartocar());
-
-    Ten::_COORDINATE_TRANSFORMATION_.set_world2toworld1(world_origin);
-}
 
 void vision_test_input_lidar()
 {
     urcu_memb_register_thread();
+    Ten::superstratum::super sp_controller;
     Ten::lidar::lidar_recogniton lidar_r;
+    Ten::superstratum::supper2 supper2_(true);
+    Ten::superstratum::super_post super_post_;
+
     int input = 0;
     ros::Rate sl(10);
     while(Ten::_TREADPOOL_FLAG_.read_flag())
@@ -806,13 +776,40 @@ void vision_test_input_lidar()
         if(flag == 1)
         {
             std::cout<< "flag == 1" << std::endl;
-            vision_calibration3();
+            sp_controller.use_relocation2();
         }
         else if(input != 0 || flag == 2)
         {
             input = 3;
             lidar_r.get_current_cloud();
             lidar_r.point_cloud_debug();
+        }
+        else if (input != 0 || flag == 3)
+        {
+            std::cout<< "flag == 3" << std::endl;
+            supper2_.set_batch_images();
+        }
+        else if (input != 0 || flag == 4)
+        {
+            std::cout<< "flag == 4" << std::endl;
+            supper2_.set_roi12_place();
+            supper2_.set_cls();
+            super_post_.set_final_result(supper2_.get_classifier_(),supper2_.get_confidence_(), supper2_.get_place(),supper2_.get_per_loss(), true, true);
+            
+            std::vector<std::vector<int>> time_ps_ = supper2_.get_time_ps_();
+            std::cout << "time_ps_: " << std::endl;
+            for (int i = 0; i < time_ps_.size(); i++)
+            {
+                std::cout << "time " << i << " ";
+                for (int j = 0; j < time_ps_[i].size(); j++)
+                {
+                    std::cout << time_ps_[i][j] << ", ";
+                }
+                std::cout << std::endl;
+            }
+            // 调试打印
+            supper2_.print_post_cls();
+
         }
         else if(flag == 0)
         {
@@ -832,6 +829,118 @@ void vision_test_lidar_getttf()
         ros::spinOnce();
         sl.sleep();
     }
+}
+
+void vision_test_super1()
+{
+    urcu_memb_register_thread();
+
+    std::string dataset_path = "/home/h/图片/test_datas_red";
+    std::vector<std::vector<Ten::ORB::debug_orb_exhaust_element>> datasets = Ten::ORB::load_exhaust_dataset(dataset_path);
+    size_t num = 0;
+
+    float total_sure_loss = 0.0f;
+    for(size_t i = 0; i < datasets.size(); i++)
+    {
+        // int i = 0;
+        Ten::superstratum::supper2 supper2_(true);
+        Ten::superstratum::super_post super_post_;
+        std::cout << "---------------------------------idx: " << i + 1 << std::endl;
+        std::vector<int> label(12);
+        std::vector<Ten::ORB::debug_orb_exhaust_element> batch_images_labels = datasets[i];
+        std::vector<Ten::ORB::orb_exhaust_element> batch_images;
+
+        for (int j = 0; j < batch_images_labels.size(); j++)
+        {
+            label = batch_images_labels[j].label;
+        }
+
+        // 设置 本批次图像
+        supper2_.set_debug_batch_images(batch_images_labels);
+
+        // 模型推理和后处理
+        supper2_.set_roi12_place();
+        supper2_.set_cls();
+
+        // 取结果
+        total_sure_loss += supper2_.get_sure_loss();
+        std::vector<int> cls = supper2_.get_classifier_();
+        std::vector<int> place = supper2_.get_place();
+        std::vector<float> conf = supper2_.get_confidence_();
+        std::vector<float> per_loss = supper2_.get_per_loss();
+        std::vector<std::vector<int>> time_ps_ = supper2_.get_time_ps_();
+        super_post_.set_final_result(cls,conf, place, per_loss, true,true);
+        std::vector<int> result = super_post_.get_final_result();
+
+        // std::cout << "time_ps_: " << std::endl;
+        // for (int i = 0; i < time_ps_.size(); i++)
+        // {
+        //     std::cout << "time " << i << " ";
+        //     for (int j = 0; j < time_ps_[i].size(); j++)
+        //     {
+        //         std::cout << time_ps_[i][j] << ", ";
+        //     }
+        //     std::cout << std::endl;
+        // }
+        // 调试打印
+        supper2_.print_post_cls(result);
+
+        namespace fs = std::filesystem;
+        std::vector<cv::Mat> roi_images = supper2_.get_roi_images();
+        for (int j = 0; j < roi_images.size(); j++)
+        {
+            std::string save_dir = dataset_path + "/r/" + to_string(i + 1);
+            if (!fs::exists(save_dir)) {
+                fs::create_directories(save_dir);
+            }
+            std::string save_path = save_dir + "/" + to_string(j + 1) + ".png";
+            cv::imwrite(save_path, roi_images[j]);
+        }
+
+        int flag = 0;
+        for(size_t j = 0; j < label.size(); j++)
+        {
+            if(label[j] != place[j])
+            {
+                flag = 1;
+                break;
+            }
+        }   
+
+        if(flag)
+        {
+            std::cout << std::endl;
+            std::cout << "-----------" << i+1 << "--------------" << std::endl;
+            std::cout << "place: " << std::endl;
+            for(auto& e : place)
+            {
+                std::cout << e << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "label: " << std::endl;
+            for(auto& e : label)
+            {
+                std::cout << e << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "--------------------------" << std::endl;
+
+            Ten::ORB::save_loss_label_to_json("/home/h/图片/test_datas/e", i+1, place, 0);
+        }
+        else
+        {
+            num++;
+        }
+        Ten::ORB::save_loss_label_to_json("//home/h/图片/test_datas/r", i+1, place, 0);
+    }
+
+    std::cout << "total_sure_loss: " << total_sure_loss << std::endl;
+    std::cout << "avg_sure_loss: " << total_sure_loss / float(datasets.size()) << std::endl;
+    
+    if(datasets.size() != 0)
+        std::cout << "accuracy: " << (float)num / datasets.size() << std::endl;
+    
+    urcu_memb_unregister_thread();
 }
 
 

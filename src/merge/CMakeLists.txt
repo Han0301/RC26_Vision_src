@@ -335,6 +335,7 @@ target_sources(merge_node
   src/threadpool.cpp
   src/log/logger.cpp
   src/yolo/yolo_base.cpp
+  src/orb/orb_debug.cpp
   src/recognition/world_to_camera.cpp
   src/recognition/camera_calibration.cpp
   #src/recognition/zbuffer_simplify.cpp

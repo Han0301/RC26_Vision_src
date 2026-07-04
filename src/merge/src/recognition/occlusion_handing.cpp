@@ -4,12 +4,25 @@
 
 namespace Ten{
 void Ten_occlusion_handing::set_box_lists_(  
-    const cv::Mat& image,     
+    const cv::Mat& input_image,     
     const std::vector<cv::Point3f>& C_object_plum_points,
     const std::vector<cv::Point2f>& object_plum_2d_points,
     std::vector<box>& box_lists,
-    bool debug_mode)
+    bool debug_mode,
+    float scale)
 {
+    // 0 resize 缩放部分
+    cv::Mat image;          // 最终用于处理的图像
+    std::vector<cv::Point2f> process_2d_points; // 最终用于处理的2D点
+
+    // 缩小图像
+    cv::resize(input_image, image, cv::Size(), scale, scale, cv::INTER_NEAREST);
+    // 同步缩小2D点
+    process_2d_points.reserve(object_plum_2d_points.size());
+    for (const auto& p : object_plum_2d_points) {
+        process_2d_points.emplace_back(p.x * scale, p.y * scale);
+    }
+    
     // 1. 取到 exist_boxes_ 和 interested_boxes_
     int exist_boxes[12];
     int interested_boxes[12];
@@ -42,8 +55,8 @@ void Ten_occlusion_handing::set_box_lists_(
     // 2. 根据深度信息 更新2d点列表
     std::vector<surface_2d_point> object_2d;
     std::vector<surface_2d_point> plum_2d;      // 通过下标来访问， 【0】表示 正面或后面， 【1】表示 左侧面或右侧面， 【2】表示 上面或地面
-    set_surface_2d_point(C_object_plum_points, object_plum_2d_points, object_2d, "object");
-    set_surface_2d_point(C_object_plum_points, object_plum_2d_points, plum_2d, "plum");
+    set_surface_2d_point(C_object_plum_points, process_2d_points, object_2d, "object");
+    set_surface_2d_point(C_object_plum_points, process_2d_points, plum_2d, "plum");
 
     // 3. 填充 zbuffer 矩阵
     // 3.1 初始化深度缓冲（初始值为最大浮点数，表示无深度）
@@ -75,8 +88,13 @@ void Ten_occlusion_handing::set_box_lists_(
         float plum_x_min = FLT_MAX,plum_y_min = FLT_MAX,plum_x_max = FLT_MIN,plum_y_max = FLT_MIN;
         cal_points_range(all_points,plum_x_min,plum_y_min,plum_x_max,plum_y_max);
         // 3.3.4 写入主zbuffer（台阶深度更近则更新）
-        for (int row = int(plum_y_min) - 1; row < int(plum_y_max) + 1; ++row) {
-            for (int col = int(plum_x_min) - 1; col < int(plum_x_max) + 1; ++col) {
+        const int row_start = int(plum_y_min);
+        const int row_end = int(plum_y_max);
+        const int col_start = int(plum_x_min);
+        const int col_end = int(plum_x_max);
+
+        for (int row = row_start; row < row_end; ++row) {
+            for (int col = col_start; col < col_end; ++col) {
                 if (row < 0 || row >= image.rows || col < 0 || col >= image.cols) continue;
                 if (plum_temp.at<float>(row, col) < zbuffer.at<float>(row, col)) {
                     zbuffer.at<float>(row, col) = plum_temp.at<float>(row, col);
@@ -84,6 +102,7 @@ void Ten_occlusion_handing::set_box_lists_(
             }
         }  
     }
+
     // 3.4 再填充方块的深度, 4 在循环中填充各个方块的roi图像信息
     for(size_t i = 0; i < object_2d.size(); i+=3)
     {
@@ -106,10 +125,14 @@ void Ten_occlusion_handing::set_box_lists_(
         cal_points_range(all_points,object_x_min,object_y_min,object_x_max,object_y_max);
         // 3.4.4 合并到方块深度缓冲 object_zbuffer + 全局深度缓冲 zbuffer, 并 写入当前方块范围的 depth_regions 
         std::unordered_map<float, std::vector<cv::Point2f>> depth_regions;        // depth_regions 表示 深度-对应深度的点集
+        const int row_start = int(object_y_min);
+        const int row_end = int(object_y_max);
+        const int col_start = int(object_x_min);
+        const int col_end = int(object_x_max);
         if (exist_boxes[i / 3])
         {
-            for (int row = int(object_y_min) - 1; row < int(object_y_max) + 1; ++row) {
-                for (int col = int(object_x_min) - 1; col < int(object_x_max) + 1; ++col) {
+            for (int row = row_start; row < row_end; ++row) {
+                for (int col = col_start; col < col_end; ++col) {
                     if (row < 0 || row >= image.rows || col < 0 || col >= image.cols) continue;
                     if (object_temp.at<float>(row, col) == FLT_MAX) continue;
                     if (object_temp.at<float>(row, col) < zbuffer.at<float>(row, col)) {
@@ -122,8 +145,8 @@ void Ten_occlusion_handing::set_box_lists_(
         }
         else
         {
-            for (int row = int(object_y_min) - 1; row < int(object_y_max) + 1; ++row) {
-                for (int col = int(object_x_min) - 1; col < int(object_x_max) + 1; ++col) {
+            for (int row = row_start; row < row_end; ++row) {
+                for (int col = col_start; col < col_end; ++col) {
                     if (row < 0 || row >= image.rows || col < 0 || col >= image.cols) continue;
                     if (object_temp.at<float>(row, col) == FLT_MAX) continue;
                     if (object_temp.at<float>(row, col) < zbuffer.at<float>(row, col)) {
@@ -132,7 +155,7 @@ void Ten_occlusion_handing::set_box_lists_(
                     depth_regions[object_zbuffer.at<float>(row, col)].emplace_back(col, row);
                 }
             }   
-        } 
+        }
 
         // 4 填充好单个方块的zbuffer深度信息后， 开始裁剪图像信息
         // 4.1 在当前方块范围内，找到 有效的，面积最大的（认为在方块几个面中最优）的 点集 valid_max_points
@@ -163,8 +186,8 @@ void Ten_occlusion_handing::set_box_lists_(
         {
             std::cout << "place: " << i / 3 + 1 << ", valid_max_points.size(): " << valid_max_points.size() << ", is_update_img: " << is_update_img << std::endl;
         }
-        if (!(is_update_img)) continue;
-        
+        if (!is_update_img) continue;
+
         // 填充point_size
         box_lists[i / 3].point_size = valid_max_points.size();
 
@@ -190,13 +213,26 @@ void Ten_occlusion_handing::set_box_lists_(
             std::cout << "🤡in func: set_box_lists_ 4.4.1,Invalid ROI rect: x= " <<roi_rect.x <<", y="<<roi_rect.y<<", w="<<roi_rect.width<<", h="<<roi_rect.height <<", skip" << std::endl;
             continue;
         }
-        // 4.4.2 生成 image_roi,mask_roi
-        cv::Mat image_roi = image(roi_rect);
-        cv::Mat mask_roi = roi_mask(roi_rect);
+        // 坐标反向缩放：还原到原图高清坐标
+        int ori_x = cvRound(roi_rect.x / scale);
+        int ori_y = cvRound(roi_rect.y / scale);
+        int ori_w = cvRound(roi_rect.width / scale);
+        int ori_h = cvRound(roi_rect.height / scale);
+        cv::Rect roi_rect_ori(ori_x, ori_y, ori_w, ori_h);
+
+        roi_rect_ori &= cv::Rect(0, 0, input_image.cols, input_image.rows);
+        if (roi_rect_ori.area() <= 0) continue;
+
+        // 4.4.2 生成 原图像的 image_roi,mask_roi
+        cv::Mat image_roi = input_image(roi_rect_ori);
+
+        // 小图掩码缩放回原图
+        cv::Mat mask_roi_ori;
+        cv::resize(roi_mask(roi_rect), mask_roi_ori, roi_rect_ori.size(), 0, 0, cv::INTER_NEAREST);
 
         // 4.5 在 image_roi 中 生成有效区域 mask_roi
         cv::Mat crop_roi = cv::Mat::zeros(image_roi.size(), image_roi.type());
-        image_roi.copyTo(crop_roi, mask_roi);
+        image_roi.copyTo(crop_roi, mask_roi_ori);
 
         // 4.6 转为正方形
         int max_side = std::max(crop_roi.cols, crop_roi.rows);
@@ -220,6 +256,8 @@ void Ten_occlusion_handing::set_box_lists_(
         box_lists[i / 3].zbuffer_flag = 1;
         box_lists[i / 3].roi_valid_flag = 1;
     }
+
+
 }
 
 

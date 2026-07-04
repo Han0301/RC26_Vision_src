@@ -26,6 +26,18 @@ namespace Ten
             cv::Mat tvec_;
             cv::Mat image_;
         };
+
+        struct debug_orb_exhaust_element
+        {
+            // 默认构造函数：创建实例时自动初始化所有成员
+            debug_orb_exhaust_element()
+            {
+                //resize为12
+                label.resize(12,0);
+            }
+            orb_exhaust_element oee;
+            std::vector<int> label;
+        };
         
         class orb_exhaust
         {
@@ -156,6 +168,24 @@ namespace Ten
                 return all_combinations;
             }
         };
+
+        /**
+         * @brief 加载数据集主函数
+         * @param root_dir 总文件夹路径（如 "test"）
+         * @return 外层vector：子文件夹1/2/3...；内层vector：每个文件对应的元素
+         */
+        std::vector<std::vector<debug_orb_exhaust_element>> load_exhaust_dataset(const std::string& root_dir);
+
+        // ====================== 核心函数 ======================
+        /**
+         * @brief 生成JSON文件并写入loss和label
+         * @param root_dir 主文件夹路径（如 test）
+         * @param i 文件名序号，最终生成 i.json
+         * @param label 标签向量，写入JSON的 "label" 字段
+         * @param loss 损失值，写入JSON的 "loss" 字段
+         * @throw std::runtime_error 文件夹创建/文件写入失败时抛出异常
+         */
+        void save_loss_label_to_json(const std::string& root_dir, int i, const std::vector<int>& label, double loss);
 
     } 
 }

@@ -179,14 +179,16 @@ public:
      * @param C_object_plum_points 相机坐标系下，方块和台阶的3D点
      * @param object_plum_2d_points  像素坐标系下，方块和台阶的2d点
      * @param box_lists 方块的列表
-     * @param debug_mode 是否调试的标志, 默认为false
+     * @param debug_mode 是否启用调试模式， 默认是false
+     * @param scale 缩放比例, 默认为1.0, 表示不缩放， 缩放可提升平方倍zb速度
      */
     void set_box_lists_(
-        const cv::Mat& image,     
+        const cv::Mat& input_image,     
         const std::vector<cv::Point3f>& C_object_plum_points,
         const std::vector<cv::Point2f>& object_plum_2d_points,
         std::vector<box>& box_lists,
-        bool debug_mode = false);
+        bool debug_mode = false,
+        float scale = 1.0f);
 
     /**
      * @brief 直接在原图像中绘制框
