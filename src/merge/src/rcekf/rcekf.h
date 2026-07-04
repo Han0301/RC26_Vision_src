@@ -86,6 +86,54 @@ namespace Ten
 {
     struct PV
     {
+        // 减法（同原有风格）
+        PV operator-(const PV& other) const {
+            PV result;
+            result.pose = this->pose - other.pose;
+            result.velocity = this->velocity - other.velocity;
+            return result;
+        }
+
+        // 负号（同原有风格）
+        PV operator-() const {
+            PV result;
+            result.pose = -this->pose;
+            result.velocity = -this->velocity;
+            return result;
+        }
+
+        // 加法 +
+        PV operator+(const PV& other) const {
+            PV result;
+            result.pose = this->pose + other.pose;
+            result.velocity = this->velocity + other.velocity;
+            return result;
+        }
+
+        // 减等于 -=
+        PV& operator-=(const PV& other) {
+            pose -= other.pose;
+            velocity -= other.velocity;
+            return *this;
+        }
+
+        // 加等于 +=
+        PV& operator+=(const PV& other) {
+            pose += other.pose;
+            velocity += other.velocity;
+            return *this;
+        }
+
+        // 相等判断
+        bool operator==(const PV& tmp) const {
+            return pose == tmp.pose &&
+                velocity == tmp.velocity;
+        }
+
+        bool operator!=(const PV& tmp) const {
+            return !(*this == tmp);
+        }
+
         Ten::XYZRPY pose;
         Ten::XYZRPY velocity;
     };

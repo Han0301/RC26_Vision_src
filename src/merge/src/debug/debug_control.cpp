@@ -905,9 +905,9 @@ void test_lidar_point_lio_imu2()
         pose_and_velocity_now.pose = pose;
         //速度变化
         Ten::XYZRPY lidar_LA;
-        lidar_LA._xyz._x = odo.twist.twist.linear.x;
-        lidar_LA._xyz._y = odo.twist.twist.linear.y;
-        lidar_LA._xyz._z = odo.twist.twist.linear.z;
+        lidar_LA._xyz._x = 0.95*odo.twist.twist.linear.x;
+        lidar_LA._xyz._y = 0.95*odo.twist.twist.linear.y;
+        lidar_LA._xyz._z = 0.95*odo.twist.twist.linear.z;
         lidar_LA._rpy._roll = odo.twist.twist.angular.x;
         lidar_LA._rpy._pitch = odo.twist.twist.angular.y;
         lidar_LA._rpy._yaw = odo.twist.twist.angular.z;
@@ -930,20 +930,23 @@ void test_lidar_point_lio_imu2()
         }
 
 
+        // error = predict.processImu(lidar_LA._xyz, pose_and_velocity_now.pose._rpy);
+        // pose_and_velocity_now.pose += error;
+
         Ten::PV pose_and_velocity_ekf = ekf_fliter.process(pose_and_velocity_now, dt);
-        pose_and_velocity_now = pose_and_velocity_ekf;
+        //pose_and_velocity_now = pose_and_velocity_ekf;
+        pose_and_velocity_now.pose = pose_and_velocity_ekf.pose + predict.processImu(pose_and_velocity_ekf.velocity._xyz, pose_and_velocity_ekf.pose._rpy);
         
         last_time = curtime;
-        error = predict.processImu(lidar_LA._xyz, pose_and_velocity_now.pose._rpy);
-        pose_and_velocity_ekf.pose += error;
         
-        pose = pose_and_velocity_ekf.pose;
-        lidar_LA = pose_and_velocity_ekf.velocity;
+        
+        // pose = pose_and_velocity_ekf.pose;
+        // lidar_LA = pose_and_velocity_ekf.velocity;
 
-        Ten::_COORDINATE_TRANSFORMATION_.set_worldtolidar(pose);
-        Ten::XYZRPY result = Ten::_COORDINATE_TRANSFORMATION_.getXYZRPY_incline();
+        // Ten::_COORDINATE_TRANSFORMATION_.set_worldtolidar(pose);
+        // Ten::XYZRPY result = Ten::_COORDINATE_TRANSFORMATION_.getXYZRPY_incline();
 
-        pose_and_velocity_ekf.pose = result;
+        //pose_and_velocity_ekf.pose = result;
 
         //测试
         //pose_and_velocity_ekf = pose_and_velocity_now;
@@ -998,8 +1001,8 @@ void test_lidar_point_lio_imu2()
         ros::Time stamp = odo.header.stamp;
         ros::Time new_stamp = stamp + ros::Duration(0.1);
 
-        publishOdometryFromPVraw(pose_and_velocity_now, stamp);
-        publishOdometryFromPVekf(pose_and_velocity_ekf, new_stamp);
+        publishOdometryFromPVraw(pose_and_velocity_now, new_stamp);
+        publishOdometryFromPVekf(pose_and_velocity_ekf, stamp);
         sll.sleep();
     }
 

@@ -2,6 +2,7 @@
 #define __CONTROLR2_H_
 #include "./controlR1.h"
 #include "./../apriltag/apriltag_pose_module.h"
+#include "./../kfs_detector/kfs_detector.h"
 
 namespace Ten
 {
@@ -33,9 +34,10 @@ namespace Ten
             urcu_memb_register_thread();
             Ten::Ten_serial& serial = Ten::Ten_serial::GetInstance();
             float arr[4] = {0};
-            size_t size = sizeof(arr);
-            size_t num = size / sizeof(float);
+            size_t size = sizeof(arr);      // 占用的总字节数
+            size_t num = size / sizeof(float);      // 数组中的元素的总个数
         
+            // 设置稳态误差
             Ten::XYZRPY xyzrpy_error;
             xyzrpy_error._xyz._x = _r2_xyzrpy_init_error_xyz_x_;
             xyzrpy_error._xyz._y = _r2_xyzrpy_init_error_xyz_y_;
@@ -45,6 +47,7 @@ namespace Ten
             xyzrpy_error._rpy._yaw = _r2_xyzrpy_init_error_rpy_yaw_;
             Ten::_COORDINATE_TRANSFORMATION_.set_stead_state_error(xyzrpy_error);
         
+            // 设置lidar坐标系到车坐标系的坐标变换
             Ten::XYZRPY xyzrpy_car;
             xyzrpy_car._xyz._x = _r2_xyzrpy_car_xyz_x_;
             xyzrpy_car._xyz._y = _r2_xyzrpy_car_xyz_y_;
@@ -248,9 +251,9 @@ namespace Ten
                 pose_and_velocity_now.pose = pose;
                 //速度变化
                 Ten::XYZRPY lidar_LA;
-                lidar_LA._xyz._x = odo.twist.twist.linear.x;
-                lidar_LA._xyz._y = odo.twist.twist.linear.y;
-                lidar_LA._xyz._z = odo.twist.twist.linear.z;
+                lidar_LA._xyz._x = 0.95*odo.twist.twist.linear.x;
+                lidar_LA._xyz._y = 0.95*odo.twist.twist.linear.y;
+                lidar_LA._xyz._z = 0.95*odo.twist.twist.linear.z;
                 lidar_LA._rpy._roll = odo.twist.twist.angular.x;
                 lidar_LA._rpy._pitch = odo.twist.twist.angular.y;
                 lidar_LA._rpy._yaw = odo.twist.twist.angular.z;
@@ -271,10 +274,12 @@ namespace Ten
                     sl.sleep();
                     continue;
                 }
+
                 //ekf
+                //Ten::PV pose_and_velocity_ekf = ekf_fliter.process(pose_and_velocity_now, dt);
                 Ten::PV pose_and_velocity_ekf = ekf_fliter.process(pose_and_velocity_now, dt);
                 //imu
-                error = predict.processImu(lidar_LA._xyz, pose_and_velocity_now.pose._rpy);
+                //error = predict.processImu(lidar_LA._xyz, pose_and_velocity_now.pose._rpy);
                 //pose_and_velocity_ekf.pose += error;
 
                 last_time = curtime;
@@ -352,6 +357,7 @@ namespace Ten
             int pool_request[10] = {0};
             std::vector<std::function<void()>> func_request;
             func_request.push_back(Ten::apriltag_pose_module::serial_send);
+            //func_request.push_back(Ten::kfs_detector_controller);
             //func_request.push_back(test_pnp);
 
             //ros::Rate sl(10);
@@ -360,9 +366,9 @@ namespace Ten
                 uint8_t arr[1000] = {0};
                 uint8_t frame_id = 0;
                 uint8_t length = 0;
-                if(serial.serial_read(arr, frame_id, length))
+                if(serial.serial_read2(arr, frame_id, length))
                 {
-                    
+                    //std::cout << "frame_id: " << frame_id << std::endl;
                     if(frame_id == 4) //重定位
                     {
                         uint8_t result[1] = {0};
@@ -384,17 +390,17 @@ namespace Ten
                             //如果第一次调用
                             if(pool_request[0] == 0)
                             {
+                                Ten::_APRILTAG_FLAG_.set_flag(1);
                                 std::cout << "pool_request[0]: " << pool_request[0] << std::endl;
                                 pool.enqueue(func_request[0]);
                             }
                             pool_request[0] = 1;
-                            //uint8_t result[1] = {0};
-                            //serial.serial_send(result, 6, sizeof(result));
                         }
                         else if(arr[0] == 0)
                         {
                             uint8_t result[1] = {0};
                             Ten::_APRILTAG_FLAG_.set_flag(0);
+                            std::cout << "Ten::_APRILTAG_FLAG_.set_flag(0)" << std::endl;
                             serial.serial_send(result, 6, sizeof(result)); 
                             pool_request[0] = 0;
                         }   
@@ -404,30 +410,36 @@ namespace Ten
                     {
                         Ten::_MAP_FLAG_.set_flag(0);
                     }
-                    // if(frame_id == 7) //camera_kfs
-                    // {
-                    //     if(arr[0] == 1)
-                    //     {
-                    //         //如果第一次调用
-                    //         if(pool_request[0] == 0)
-                    //         {
-                    //             //pool.enqueue(func_request[0]);
-                    //         }
-                    //         pool_request[0] = 1;
-                    //     }
-                    //     else if(arr[0] == 0)
-                    //     {
-                    //         uint8_t result[1] = {0};
-                    //         Ten::_CAMERA_KFS_FLAG_.set_flag(0);
-                    //         serial.serial_send(result, 7, sizeof(result)); 
-                    //         pool_request[0] = 0;
-                    //     }   
-                    // }
+
+
+
+                    if(frame_id == 8) //kfs_detector
+                    {
+                        if(arr[0] == 1 || arr[0] == 2)
+                        {
+                            //如果第一次调用
+                            if(pool_request[1] == 0)
+                            {
+                                Ten::_KFS_DECTECTOR_FLAG_.set_flag(1);
+                                std::cout << "pool_request[1]: " << pool_request[0] << std::endl;
+                                pool.enqueue(Ten::kfs_detector_controller, arr[0]);
+                            }
+                            pool_request[1] = 1;
+                        }
+                        else if(arr[0] == 0)
+                        {
+                            uint8_t result[1] = {0};
+                            std::cout << "arr[0] == 0" << std::endl;
+                            Ten::_KFS_DECTECTOR_FLAG_.set_flag(0);
+                            serial.serial_send(result, 8, sizeof(result)); 
+                            pool_request[1] = 0;
+                        }   
+                    }
 
 
                 }
                 //sl.sleep();
-                usleep(10*1000);
+                usleep(1*1000);
             }
             urcu_memb_unregister_thread();
         }

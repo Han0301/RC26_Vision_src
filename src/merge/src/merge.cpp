@@ -1,5 +1,6 @@
 #include "./debug/debug_control.cpp"
 #include "./debug/debug_vision.cpp"
+#include "./debug/vision.cpp"
 #include "./superstratum/controlR2.h"
 #include "./superstratum/super2.h"
 #include "./point_lio/src/laserMapping2.h"
@@ -144,15 +145,17 @@ void sigintHandler(int sig)
         Ten::Ten_lidar::GetInstance(lidar_path);
         Ten::ThreadPool pool(4);
         //pool.enqueue(Loopcallback);
-        pool.enqueue(test_lidar_point_lio_imu2);
+        //pool.enqueue(test_lidar_point_lio_imu2);
         // //pool.enqueue(test_lidar_ekf_of_point_lio);
         // //pool.enqueue(test_lidar_fast_lio);
-        // pool.enqueue(Ten::script_control);
+        pool.enqueue(Ten::script_control);
         // pool.enqueue(test_mapping);
+
         // pool.enqueue(Ten::superstratum::controlR2::serial_send_lidarR2_ekf_imu);
         // pool.enqueue(Ten::superstratum::controlR2::serial_receiver);
-        laserMapping();
-        //vision_test_super1();
+        // laserMapping();
+
+        vision_test_super2();
         //vision_test_relocation2();
         //serial_send_test1();
         //publishimg2();
@@ -165,7 +168,7 @@ void sigintHandler(int sig)
         // }
         //test_path();
 
-        //test_vision_cam_multi();
+        //test_vision_cam();
 
         return 0;
     }

@@ -48,6 +48,16 @@ public:
         @return bool 是否读取成功
     */
     bool serial_read(void* p, uint8_t& received_frame_id, uint8_t& received_length);
+    /**
+        @brief 增强版串口接收函数
+        @details 检测到帧头后会**等待缓冲区数据**，完整解析一帧；无数据时阻塞等待（超时退出）
+        @param p: 数据存储地址
+        @param received_frame_id: 输出-帧ID
+        @param received_length: 输出-数据长度
+        @return bool 解析成功返回true，超时/异常返回false
+    */
+    bool serial_read2(void* p, uint8_t& received_frame_id, uint8_t& received_length);
+
     /*
       @brief 检查串口是否打开
       @return bool 
@@ -85,6 +95,21 @@ private:
 
     bool init_serial(const std::string& port = "/dev/ttyACM", const size_t& serial_baud = 115200);
 
+// 串口读取状态机
+enum ReadState {
+    WAIT_HEAD_0,
+    WAIT_HEAD_1,
+    WAIT_FRAME_ID,
+    WAIT_LENGTH,
+    WAIT_DATA,
+    WAIT_CHECKSUM,
+    WAIT_END
+};
+
+ReadState read_state_ = WAIT_HEAD_0;  // 解析状态（关键：保存上次位置）
+uint8_t rx_buffer_[128];             // 数据缓存
+uint8_t rx_index_ = 0;               // 数据写入位置
+uint8_t target_length_ = 0;          // 数据总长度
     
 serial::Serial serial_;
 std::mutex send_mtx_;

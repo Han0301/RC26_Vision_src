@@ -27,7 +27,7 @@ _r1_xyzrpy_init_error_rpy_yaw_: 0.0
 # ====================== r2 车相对雷达 ======================
 _r2_xyzrpy_car_xyz_x_: 0.27839    # 0.338        #0.317327
 _r2_xyzrpy_car_xyz_y_:  0.00465     #0.0253          #0.0253            #0.022
-_r2_xyzrpy_car_xyz_z_: 0.771     #-0.788
+_r2_xyzrpy_car_xyz_z_: -0.771     #-0.788
 _r2_xyzrpy_car_rpy_roll_: 0.0
 _r2_xyzrpy_car_rpy_pitch_: 0.0
 _r2_xyzrpy_car_rpy_yaw_: -0.04
@@ -175,3 +175,4 @@ _imu_q_pos_: 0.001
 _imu_q_att_: 0.0001
 _imu_q_vel_: 0.01
 
+_kfs_path_: " "

@@ -71,6 +71,31 @@ namespace Ten
             result.push_back(std::stoi(numBuffer));
         }
 
+        int flag  = 1;
+        Ten::_global_path_.clear();
+        for(size_t i = 0; i < result.size(); i++)
+        {
+            if(result[i] == '(')
+            {
+                flag = 0;
+                continue;
+            }
+            else if(result[i] == ')')
+            {
+                flag = 1;
+                continue;
+            }
+            else if(result[i] == 0)
+            {
+                flag = 0;
+                continue;
+            }
+
+            if(flag)
+            {
+                Ten::_global_path_.push_back(result[i]);
+            }
+        }
         return result;
     }
 
@@ -105,11 +130,15 @@ namespace Ten
             last = receive;
             std::vector<int> path = readFileToAsciiVector(std::string(ROOT_DIR) + std::string("path/map.txt"));
             uint8_t length = path.size();
+            _global_path_.resize(length);
+
             if(length)
             {
                 for(size_t i = 0; i < path.size() && i < 30; i++)
                 {
                     arr[i] = (uint8_t)path[i];
+
+                    
                 }
                 Ten::_MAP_FLAG_.set_flag(1);
                 while(Ten::_MAP_FLAG_.read_flag() && Ten::_TREADPOOL_FLAG_.read_flag())

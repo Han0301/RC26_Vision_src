@@ -274,9 +274,9 @@ namespace Ten
                     pose_and_velocity_now.pose = pose;
                     //速度变化
                     Ten::XYZRPY lidar_LA;
-                    lidar_LA._xyz._x = odo.twist.twist.linear.x;
-                    lidar_LA._xyz._y = odo.twist.twist.linear.y;
-                    lidar_LA._xyz._z = odo.twist.twist.linear.z;
+                    lidar_LA._xyz._x = 0.9*odo.twist.twist.linear.x;
+                    lidar_LA._xyz._y = 0.9*odo.twist.twist.linear.y;
+                    lidar_LA._xyz._z = 0.9*odo.twist.twist.linear.z;
                     lidar_LA._rpy._roll = odo.twist.twist.angular.x;
                     lidar_LA._rpy._pitch = odo.twist.twist.angular.y;
                     lidar_LA._rpy._yaw = odo.twist.twist.angular.z;
@@ -398,7 +398,7 @@ namespace Ten
                         }
                     }
                     //sl.sleep();
-                    usleep(10*1000);
+                    usleep(1*1000);
                 }
                 urcu_memb_unregister_thread();
             }

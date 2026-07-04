@@ -38,7 +38,7 @@ void test_mapping()
 
 void test_vision_cam()
 {
-    Ten::Ten_usb_cam& usbcam = Ten::Ten_usb_cam::GetInstance(Ten::_usb_device_num1_,640,480,60);
+    Ten::Ten_usb_cam& usbcam = Ten::Ten_usb_cam::GetInstance(Ten::_usb_device_num1_,640,480,30);
     ros::Rate sl(60);
     while(Ten::_TREADPOOL_FLAG_.read_flag())
     {
@@ -120,9 +120,15 @@ void test_path()
 {
     std::vector<int> path = Ten::readFileToAsciiVector(std::string(ROOT_DIR) + std::string("path/map.txt"));
     
-    for(size_t i = 0; i < path.size() && i < 30; i++)
+    for(size_t i = 0; i < path.size(); i++)
     {
         std::cout << path[i] << " ";
+    }
+    std::cout << std::endl;
+    
+    for(size_t i = 0; i < Ten::_global_path_.size(); i++)
+    {
+        std::cout << Ten::_global_path_[i] << " ";
     }
     std::cout << std::endl;
 }

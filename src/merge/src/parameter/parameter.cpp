@@ -215,5 +215,7 @@ namespace Ten
     double _imu_q_att_   = 0;   // 姿态过程噪声系数
     double _imu_q_vel_   = 0;   // 线速度过程噪声系数
 
+    std::vector<int> _global_path_;
 
+    std::string _kfs_path_;
 }

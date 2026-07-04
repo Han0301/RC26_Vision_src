@@ -4,12 +4,10 @@
 import rospy
 from PIL import ImageDraw
 from PIL import ImageFont
-from std_msgs.msg import String
 import tkinter as tk
 from tkinter import ttk, messagebox
 import json
 import os
-import subprocess
 from PIL import Image, ImageTk
 from std_msgs.msg import String, Int32  # 修改这一行，加上 Int32
 
@@ -163,11 +161,15 @@ class TouchscreenUI:
         path_display_frame.pack(fill=tk.X, pady=5, padx=10)
         
         self.r2_path_var = tk.StringVar(value="R2 路径规划：暂无")
-        self.r1_path_var = tk.StringVar(value="R1 路径规划：暂无")
+        self.r1_path_var = tk.StringVar(value="R1 夹方块：暂无")
         
         # R2 在上，R1 在下
-        tk.Label(path_display_frame, textvariable=self.r2_path_var, fg="#8be9fd", bg="#2d2d2d", font=('DejaVu Sans', 14, 'bold')).pack(anchor=tk.W, pady=2)
-        tk.Label(path_display_frame, textvariable=self.r1_path_var, fg="#ffb86c", bg="#2d2d2d", font=('DejaVu Sans', 14, 'bold')).pack(anchor=tk.W, pady=2)
+        # R2 在上，R1 在下 (修改此处：添加 width, 内部 anchor 和 justify)
+        tk.Label(path_display_frame, textvariable=self.r2_path_var, fg="#ffff00", bg="#2d2d2d",
+                 font=('DejaVu Sans', 14, 'bold'), width=50, anchor=tk.W, justify=tk.LEFT).pack(anchor=tk.W, pady=2)
+
+        tk.Label(path_display_frame, textvariable=self.r1_path_var, fg="#00ffff", bg="#2d2d2d",
+                 font=('DejaVu Sans', 14, 'bold'), width=50, anchor=tk.W, justify=tk.LEFT).pack(anchor=tk.W, pady=2)
 
         # ---------------------------------------------------------------------
 
@@ -246,7 +248,7 @@ class TouchscreenUI:
             self.update_parsed_path_display()
         else:
             self.r2_path_var.set("R2 路径规划：暂无")
-            self.r1_path_var.set("R1 路径规划：暂无")
+            self.r1_path_var.set("R1 夹方块：暂无")
             self.r2_robot_path.clear()
             self.r2_targets.clear()
             self.r1_targets.clear()
@@ -268,7 +270,7 @@ class TouchscreenUI:
         
         if not os.path.exists(self.database_path):
             self.r2_path_var.set("R2 路径规划：[文件丢失] 找不到数据库")
-            self.r1_path_var.set("R1 路径规划：[文件丢失] 找不到数据库")
+            self.r1_path_var.set("R1 夹方块：[文件丢失] 找不到数据库")
             self.redraw_canvas()
             return
             
@@ -287,49 +289,51 @@ class TouchscreenUI:
             return
             
         if matched_content:
-            tokens = matched_content.split()
-            if '0' in tokens:
-                split_idx = tokens.index('0')
-                r2_tokens = tokens[:split_idx]
-                r1_tokens = tokens[split_idx+1:]
-            else:
-                parts = matched_content.split('0')
-                r2_tokens = parts[0].split() if len(parts) > 0 else []
-                r1_tokens = parts[1].split() if len(parts) > 1 else []
-                
-            # --- 新增：解析具体格位用于画布渲染 (字符转为 0-11 索引) ---
-            # --- 修改：修复只有 (X) 格式时提取不到 R2 动作目标的问题 ---
-            # R2 解析：形式如 "3" 或 "3(5)" 或纯动作 "(5)"
-            for token in r2_tokens:
-                # 兼容前面没有数字的情况
-                match = re.match(r"^(\d+)?(?:\((\d+)\))?$", token)
-                if match:
-                    if match.group(1):  # 如果有机器人要走的坐标
-                        r_pos = int(match.group(1)) - 1
-                        if 0 <= r_pos < 12:
-                            self.r2_robot_path.append(r_pos)
-                    if match.group(2):  # 如果有括号内的动作目标
-                        t_pos = int(match.group(2)) - 1
-                        if 0 <= t_pos < 12:
-                            self.r2_targets.append(t_pos)
-            # --------------------------------------------------------
-                            
-            # R1 解析：每一个都是要夹的方块位置
-            for token in r1_tokens:
-                if token.isdigit():
-                    t_pos = int(token) - 1
-                    if 0 <= t_pos < 12:
-                        self.r1_targets.append(t_pos)
-            # ---------------------------------------------------------
+            # 1 & 2. 提取括号内容并将内部空格换成逗号
+            # 使用正则匹配括号内容，lambda 处理匹配项
+            processed_str = re.sub(r'\((.*?)\)', lambda m: m.group(0).replace(' ', ','), matched_content)
+
+            # 3. 按空格分割每一步
+            steps = processed_str.strip().split()
+
+            # 拆分R2与R1的部分
+            idx = steps.index("0")
+            r2_part, r1_blocks = steps[:idx], steps[idx + 1:]
+
+            r2_path = []
+            r2_blocks = []
+            # 4. 解析R2
+            for step in r2_part:
+                if '(' in step:
+                    # 分割括号内外：若是5(6,7)
+                    match = re.match(r'(\d+)\((.*)\)', step)
+                    if match:
+                        node = match.group(1)
+                        inner_content = match.group(2)
+
+                        r2_path.append(int(node) - 1)  # 括号外是路径
+                        blocks = inner_content.split(',')
+                        [r2_blocks.append(int(x) - 1) for x in blocks]  # 括号内分割成数组
+                    # (6,7)
+                    else:
+                        match = re.match(r'\((.*)\)', step)
+                        inner_content = match.group(1)
+                        blocks = inner_content.split(',')
+                        [r2_blocks.append(int(x) - 1) for x in blocks]  # 括号内分割成数组
+                else:
+                    r2_path.append(int(step) - 1)  # 纯路径节点
             
-            r2_str = " → ".join(r2_tokens) if r2_tokens else "原地待命"
-            r1_str = " → ".join(r1_tokens) if r1_tokens else "原地待命"
+            r2_str = " → ".join(r2_part) if r2_part else "原地待命"
+            r1_str = " → ".join(r1_blocks) if r1_blocks else "原地待命"
             
             self.r2_path_var.set(f"R2 路径规划：{r2_str}")
-            self.r1_path_var.set(f"R1 路径规划：{r1_str}")
+            self.r1_path_var.set(f"R1 夹方快：{r1_str}")
+            self.r2_robot_path = r2_path
+            self.r2_targets = r2_blocks
+            self.r1_targets = [int(x) - 1 for x in r1_blocks]
         else:
             self.r2_path_var.set("R2 路径规划：数据库中无匹配序列")
-            self.r1_path_var.set("R1 路径规划：数据库中无匹配序列")
+            self.r1_path_var.set("R1 夹方快：数据库中无匹配序列")
 
         # 触发重绘以渲染路径和线框
         self.redraw_canvas()
@@ -388,7 +392,8 @@ class TouchscreenUI:
             self.canvas.create_rectangle(x1, y1, x2, y2, fill=cell_bg_color, outline="#1e1e1e", width=3)
             
             # 根据格子高度按比例缩放左下角数字字体
-            num_font_size = max(10, int(self.cell_h * 0.12))
+            # num_font_size = max(10, int(self.cell_h * 0.12))
+            num_font_size = max(10, int(self.cell_h * 0.06 + self.cell_h * 0.06))
             self.canvas.create_text(round(x1 + self.cell_w / 5), round(y1 + self.cell_h * 4 / 5),
                                     text=str(idx + 1), fill="#ffffff", font=('DejaVu Sans', num_font_size, 'bold'))
 
@@ -413,6 +418,13 @@ class TouchscreenUI:
     def apply_state_to_grid(self, state_idx):
         """将选定状态填入当前格子，并自动跳向下一格"""
         idx = self.current_cursor_idx
+
+        # --- 新增：如果输入的是 Fake (状态索引为3)，则先清除场上已有的 Fake ---
+        if state_idx == 3:
+            for i in range(12):
+                if self.grid_states[i] == 3:
+                    self.set_grid_state_visually(i, 0)  # 将旧的 Fake 置为 0 (空)
+        # -------------------------------------------------------------------
 
         self.set_grid_state_visually(idx, state_idx)
 
@@ -463,7 +475,7 @@ class TouchscreenUI:
         except IOError:
             my_font = ImageFont.load_default()
 
-        text_map = {0: "0", 1: "R1", 2: "R2", 3: "F"}
+        text_map = {0: "0", 1: "1", 2: "2", 3: "F"}
         for idx, state in enumerate(self.states_config):
             img = Image.new('RGBA', (round(self.cell_w * 3 / 4), round(self.cell_h * 3 / 4)), (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
@@ -494,7 +506,7 @@ class TouchscreenUI:
             # --- 修改：弃用图片蒙版，使用原生 create_text 将文字绘制在右侧居中 ---
             font_size = max(16, int(self.cell_h * 0.15))
             # print(font_size)
-            text_map = {0: "0", 1: "R1", 2: "R2", 3: "F"}
+            text_map = {0: "0", 1: "1", 2: "2", 3: "F"}
             
             for idx, state_idx in self.grid_states.items():
                 x1, y1 = self.get_coords_from_index(idx)
@@ -542,7 +554,7 @@ class TouchscreenUI:
                 cx1, cy1 = x1_f + self.cell_w / 2, y1_f + self.cell_h / 2
                 cx2, cy2 = x2_f + self.cell_w / 2, y2_f + self.cell_h / 2
 
-                self.canvas.create_line(cx1, cy1, cx2, cy2, fill="#00ffff", width=line_w,
+                self.canvas.create_line(cx1, cy1, cx2, cy2, fill="#FFFF00", width=line_w,
                                         arrow=tk.LAST, arrowshape=arrow_shape)
 
         # 2. 绘制 R2 夹取的方块：修改为【黄色大框】圈住右侧字体区域

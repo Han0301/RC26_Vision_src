@@ -360,6 +360,8 @@ target_sources(merge_node
   src/recognition/camera_calibration.cpp
   #src/recognition/zbuffer_simplify.cpp
   src/recognition/occlusion_handing.cpp
+  src/kfs_detector/kfs_detector.cpp
+  
   src/livox_ros_driver2/src/driver_node.cpp
   src/livox_ros_driver2/src/lds.cpp
   src/livox_ros_driver2/src/lds_lidar.cpp

@@ -27,7 +27,7 @@ _r1_xyzrpy_init_error_rpy_yaw_: 0.0
 # ====================== r2 车相对雷达 ======================
 _r2_xyzrpy_car_xyz_x_: 0.27839    # 0.338        #0.317327
 _r2_xyzrpy_car_xyz_y_:  0.00465     #0.0253          #0.0253            #0.022
-_r2_xyzrpy_car_xyz_z_: 0.771     #-0.788
+_r2_xyzrpy_car_xyz_z_: -0.771     #-0.788
 _r2_xyzrpy_car_rpy_roll_: 0.0
 _r2_xyzrpy_car_rpy_pitch_: 0.0
 _r2_xyzrpy_car_rpy_yaw_: -0.04
@@ -53,10 +53,10 @@ _r2_xyzrpy_init_error_rpy_yaw_: 0.0
 # ====================== 识别路径 / 检测 ======================
 _coner_path_: "/home/robocon/rc2026/model/corner5/best"
 _juanzhou_path_: "/home/robocon/rc2026/model/juanZhou_cls1/best"
-_box_num_: 5
+_box_num_: 8
 
 # ====================== 识别路径2 / 检测 ======================
-_roi12_path_: "/home/h/下载/yolo11s_roi12_atten_17/yolo11s_roi12_atten_17" 
+_roi12_path_: "/home/h/下载/roi12_atten_red17_" 
 _limit_count_1_: 3
 _limit_count_2_: 3
 _limit_count_3_: 2
@@ -167,11 +167,12 @@ APRILTAG_DRAW_FONT_SCALE: 0.5
 APRILTAG_DRAW_THICKNESS: 1
 APRILTAG_SAW_WINDOW_NAME: saw
 
-_usb_device_num1_: 2
-_usb_device_num2_: 4
+_usb_device_num1_: 0
+_usb_device_num2_: 2
 _usb_device_num3_: 6
 
 _imu_q_pos_: 0.001
 _imu_q_att_: 0.0001
 _imu_q_vel_: 0.01
 
+_kfs_path_: "/home/rc/RC_2026/robocon_ws18/src/merge/model/han/best"

@@ -311,7 +311,7 @@ namespace Ten
                     if (serial_.read(&end_bytes[1], 1) != 1 || end_bytes[1] != FRAME_END_0) continue;
                     //p = buff_msg;
                     //rate.sleep(); // 休眠至满足100Hz频率
-                    usleep(10000);
+                    usleep(100);
                     return true;
                 }
             }
@@ -329,10 +329,128 @@ namespace Ten
             std::cerr << "串口接受：未知致命异常" << std::endl;
             init_serial();
             return false;
-        }
-        
-        
+        }   
     }
+
+
+    /**
+        @brief 增强版串口接收函数
+        @details 检测到帧头后会**等待缓冲区数据**，完整解析一帧；无数据时阻塞等待（超时退出）
+        @param p: 数据存储地址
+        @param received_frame_id: 输出-帧ID
+        @param received_length: 输出-数据长度
+        @return bool 解析成功返回true，超时/异常返回false
+    */
+    bool Ten_serial::serial_read2(void* p, uint8_t& received_frame_id, uint8_t& received_length) 
+    {
+        std::lock_guard<std::mutex> lock(read_mtx_);
+        if (this == nullptr || p == nullptr) {
+            return false;
+        }
+
+        uint8_t byte;
+
+        try {
+            // 核心：把串口缓冲区里**所有可用字节**全部读完
+            // 读完就退出，等下次调用继续读
+            while (serial_.available() > 0) {
+                // 读 1 字节
+                if (serial_.read(&byte, 1) != 1) {
+                    continue;
+                }
+
+                // ====================== 状态机：从上次停下的位置继续解析 ======================
+                switch (read_state_) {
+                    // 1. 等待帧头 1
+                    case WAIT_HEAD_0:
+                        if (byte == FRAME_HEAD_0) {
+                            read_state_ = WAIT_HEAD_1; // 进入下一个状态
+                        }
+                        break;
+
+                    // 2. 等待帧头 2
+                    case WAIT_HEAD_1:
+                        if (byte == FRAME_HEAD_1) {
+                            read_state_ = WAIT_FRAME_ID;
+                        } else {
+                            read_state_ = WAIT_HEAD_0; // 不匹配，重新等帧头
+                        }
+                        break;
+
+                    // 3. 读取帧ID
+                    case WAIT_FRAME_ID:
+                        received_frame_id = byte;
+                        read_state_ = WAIT_LENGTH;
+                        break;
+
+                    // 4. 读取数据长度
+                    case WAIT_LENGTH:
+                        if (byte > 128) {
+                            std::cout << "data Too long" << std::endl;
+                            read_state_ = WAIT_HEAD_0; // 长度非法，重置
+                            break;
+                        }
+                        target_length_ = byte;
+                        received_length = byte;
+                        rx_index_ = 0; // 清空缓存位置
+                        read_state_ = WAIT_DATA;
+                        break;
+
+                    // 5. 读取数据（核心：累积续读，来一个存一个）
+                    case WAIT_DATA:
+                        rx_buffer_[rx_index_++] = byte;
+                        // 存满长度 → 进入校验
+                        if (rx_index_ >= target_length_) {
+                            read_state_ = WAIT_CHECKSUM;
+                        }
+                        break;
+
+                    // 6. 校验和
+                    case WAIT_CHECKSUM:
+                        if (calculateXORcheck(rx_buffer_, target_length_) == byte) {
+                            read_state_ = WAIT_END;
+                        } else {
+                            read_state_ = WAIT_HEAD_0; // 校验错，重置
+                        }
+                        break;
+
+                    // 7. 帧结束符 → 一帧完整接收！
+                    case WAIT_END:
+                        read_state_ = WAIT_HEAD_0; // 解析完成，恢复初始，准备下一帧
+
+                        if (byte == FRAME_END_0) {
+                            // 把完整数据拷贝给用户
+                            memcpy(p, rx_buffer_, target_length_);
+                            return true; // 成功收到一帧
+                        }
+                        break;
+
+                    default:
+                        read_state_ = WAIT_HEAD_0;
+                        break;
+                }
+            }
+
+            // 串口数据读完了，但还没收完一整帧
+            // 状态 & 缓存全部保留！下次调用继续从这里解析
+            return false;
+        }
+        catch (const std::exception& e) {
+            std::cerr << e.what() << '\n';
+            init_serial();
+            read_state_ = WAIT_HEAD_0; // 异常重置
+            return false;
+        }
+        catch (...) {
+            std::cerr << "串口接收：未知致命异常" << std::endl;
+            init_serial();
+            read_state_ = WAIT_HEAD_0;
+            return false;
+        }
+    }
+
+
+    
 
     Ten_serial& Ten_serial::GetInstance(const std::string& port, const size_t& serial_baud)
     {

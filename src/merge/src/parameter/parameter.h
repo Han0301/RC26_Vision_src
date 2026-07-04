@@ -160,6 +160,10 @@ namespace Ten
     extern double _imu_q_att_;   // 姿态过程噪声系数
     extern double _imu_q_vel_;   // 线速度过程噪声系数
 
+    extern std::vector<int> _global_path_;
+
+    extern std::string _kfs_path_;
+
     namespace parameter
     {
 
@@ -347,6 +351,8 @@ namespace Ten
             Ten::_imu_q_att_                                = config["_imu_q_att_"].as<double>();
             Ten::_imu_q_vel_                                = config["_imu_q_vel_"].as<double>();
 
+            _kfs_path_ = config["_kfs_path_"].as<std::string>();
+
 
             // ==============================================
             // 【全部打印】加载完成后输出所有参数
@@ -508,6 +514,8 @@ namespace Ten
             std::cout << "_imu_q_att_:   " << Ten::_imu_q_att_ << std::endl;
             std::cout << "_imu_q_vel_:   " << Ten::_imu_q_vel_ << std::endl;
 
+            std::cout << "\n--- kfs ---" << std::endl;
+            std::cout << "_kfs_path_:   " << Ten::_kfs_path_ << std::endl;
             
             std::cout << "\n==========================================================\n" << std::endl;
         }

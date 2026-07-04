@@ -191,6 +191,7 @@ extern Ten::ThreadPool_flag _PUB_CLOUD_FLAG_;
 extern Ten::ThreadPool_flag _CAMERA_KFS_FLAG_;
 extern Ten::ThreadPool_flag _APRILTAG_FLAG_;
 extern Ten::ThreadPool_flag _MAP_FLAG_;
+extern Ten::ThreadPool_flag _KFS_DECTECTOR_FLAG_;
 
 }
 

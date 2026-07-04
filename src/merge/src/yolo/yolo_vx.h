@@ -46,6 +46,12 @@ namespace Ten
                     std::cout << "😡 模型输出不匹配" << std::endl;
                     return std::vector<Detection>();
                 }
+                if(img.empty())
+                {
+                    std::cout << "img.empty()" << std::endl;
+                    return std::vector<Detection>();
+                }
+                
                 cv::Mat resized;
                 cv::resize(img, resized, cv::Size(input_shape_[3],input_shape_[2]));
                 //std::cout<< "input_shape_[2]h: "<<input_shape_[2] << " input_shape_[3]w: "<< input_shape_[3]<<std::endl;

@@ -37,7 +37,7 @@ namespace Ten
             result._z = this->_z - other._z;
             return result;
         }
-    
+
         // 负号（原有）
         XYZ operator-() const {
             XYZ result;
@@ -46,8 +46,8 @@ namespace Ten
             result._z = -this->_z;
             return result;
         }
-    
-        // 加法 +
+
+        // 加法 +（原有）
         XYZ operator+(const XYZ& other) const {
             XYZ result;
             result._x = this->_x + other._x;
@@ -55,46 +55,68 @@ namespace Ten
             result._z = this->_z + other._z;
             return result;
         }
-    
-        // 减等于 -=
+
+        // ✅ 新增：标量乘法 XYZ * double
+        XYZ operator*(double scalar) const {
+            XYZ result;
+            result._x = this->_x * scalar;
+            result._y = this->_y * scalar;
+            result._z = this->_z * scalar;
+            return result;
+        }
+
+        // 减等于 -=（原有）
         XYZ& operator-=(const XYZ& other) {
             _x -= other._x;
             _y -= other._y;
             _z -= other._z;
             return *this;
         }
-    
-        // 加等于 +=
+
+        // 加等于 +=（原有）
         XYZ& operator+=(const XYZ& other) {
             _x += other._x;
             _y += other._y;
             _z += other._z;
             return *this;
         }
-    
+
+        // ✅ 新增：标量乘等于 XYZ *= double
+        XYZ& operator*=(double scalar) {
+            _x *= scalar;
+            _y *= scalar;
+            _z *= scalar;
+            return *this;
+        }
+
         // 相等判断（原有）
         bool operator==(const XYZ& tmp) const {
             return isDoubleEqual(_x, tmp._x) &&
-                   isDoubleEqual(_y, tmp._y) &&
-                   isDoubleEqual(_z, tmp._z);
+                isDoubleEqual(_y, tmp._y) &&
+                isDoubleEqual(_z, tmp._z);
         }
-    
+
         bool operator!=(const XYZ& tmp) const {
             return !(*this == tmp);
         }
-    
+
         // 欧氏距离（原有）
         double Eclidean_distance(const XYZ& site) const {
             return (_x - site._x)*(_x - site._x) + 
-                   (_y - site._y)*(_y - site._y) + 
-                   (_z - site._z)*(_z - site._z);
+                (_y - site._y)*(_y - site._y) + 
+                (_z - site._z)*(_z - site._z);
         }
-    
+
         double _x = 0.0;
         double _y = 0.0;
         double _z = 0.0;
     };
-    
+
+    // ✅ 新增：标量左乘 double * XYZ（必须定义为全局函数）
+    inline XYZ operator*(double scalar, const XYZ& v) {
+        return v * scalar;
+    }
+
     struct RPY
     {
         // 减法（原有）
@@ -105,7 +127,7 @@ namespace Ten
             result._yaw = this->_yaw - other._yaw;
             return result;
         }
-    
+
         // 负号（原有）
         RPY operator-() const {
             RPY result;
@@ -114,8 +136,8 @@ namespace Ten
             result._yaw = -this->_yaw;
             return result;
         }
-    
-        // 加法 +
+
+        // 加法 +（原有）
         RPY operator+(const RPY& other) const {
             RPY result;
             result._roll = this->_roll + other._roll;
@@ -123,39 +145,61 @@ namespace Ten
             result._yaw = this->_yaw + other._yaw;
             return result;
         }
-    
-        // 减等于 -=
+
+        // ✅ 新增：RPY标量乘法 RPY * double
+        RPY operator*(double scalar) const {
+            RPY result;
+            result._roll = this->_roll * scalar;
+            result._pitch = this->_pitch * scalar;
+            result._yaw = this->_yaw * scalar;
+            return result;
+        }
+
+        // 减等于 -=（原有）
         RPY& operator-=(const RPY& other) {
             _roll -= other._roll;
             _pitch -= other._pitch;
             _yaw -= other._yaw;
             return *this;
         }
-    
-        // 加等于 +=
+
+        // 加等于 +=（原有）
         RPY& operator+=(const RPY& other) {
             _roll += other._roll;
             _pitch += other._pitch;
             _yaw += other._yaw;
             return *this;
         }
-    
+
+        // ✅ 新增：RPY标量乘等于 RPY *= double
+        RPY& operator*=(double scalar) {
+            _roll *= scalar;
+            _pitch *= scalar;
+            _yaw *= scalar;
+            return *this;
+        }
+
         // 相等判断（原有）
         bool operator==(const RPY& tmp) const {
             return isDoubleEqual(_roll, tmp._roll) &&
-                   isDoubleEqual(_pitch, tmp._pitch) &&
-                   isDoubleEqual(_yaw, tmp._yaw);
+                isDoubleEqual(_pitch, tmp._pitch) &&
+                isDoubleEqual(_yaw, tmp._yaw);
         }
-    
+
         bool operator!=(const RPY& tmp) const {
             return !(*this == tmp);
         }
-    
+
         double _roll = 0.0;
         double _pitch = 0.0;
         double _yaw = 0.0;
     };
-    
+
+    // ✅ 新增：RPY标量左乘 double * RPY
+    inline RPY operator*(double scalar, const RPY& r) {
+        return r * scalar;
+    }
+
     struct XYZRPY
     {
         // 减法（原有）
@@ -165,7 +209,7 @@ namespace Ten
             result._rpy = this->_rpy - other._rpy;
             return result;
         }
-    
+
         // 负号（原有）
         XYZRPY operator-() const {
             XYZRPY result;
@@ -173,44 +217,59 @@ namespace Ten
             result._rpy = -this->_rpy;   
             return result;
         }
-    
-        // 加法 +
+
+        // 加法 +（原有）
         XYZRPY operator+(const XYZRPY& other) const {
             XYZRPY result;
             result._xyz = this->_xyz + other._xyz;
             result._rpy = this->_rpy + other._rpy;
             return result;
         }
-    
-        // 减等于 -=
+
+        // ✅ 新增：XYZRPY标量乘法 XYZRPY * double
+        XYZRPY operator*(double scalar) const {
+            XYZRPY result;
+            result._xyz = this->_xyz * scalar;
+            result._rpy = this->_rpy * scalar;
+            return result;
+        }
+
+        // 减等于 -=（原有）
         XYZRPY& operator-=(const XYZRPY& other) {
             _xyz -= other._xyz;
             _rpy -= other._rpy;
             return *this;
         }
-    
-        // 加等于 +=
+
+        // 加等于 +=（原有）
         XYZRPY& operator+=(const XYZRPY& other) {
             _xyz += other._xyz;
             _rpy += other._rpy;
             return *this;
         }
-    
+
+        // ✅ 新增：XYZRPY标量乘等于 XYZRPY *= double
+        XYZRPY& operator*=(double scalar) {
+            _xyz *= scalar;
+            _rpy *= scalar;
+            return *this;
+        }
+
         // 相等判断（原有）
         bool operator==(const XYZRPY& tmp) const {
             return _xyz == tmp._xyz && _rpy == tmp._rpy;
         }
-    
+
         bool operator!=(const XYZRPY& tmp) const {
             return !(*this == tmp);
         }
-    
+
         // NaN 判断（原有）
         bool XYZRPYisnan() const {
             return std::isnan(_xyz._x) || std::isnan(_xyz._y) || std::isnan(_xyz._z) ||
-                   std::isnan(_rpy._roll) || std::isnan(_rpy._pitch) || std::isnan(_rpy._yaw);
+                std::isnan(_rpy._roll) || std::isnan(_rpy._pitch) || std::isnan(_rpy._yaw);
         }
-    
+
         // 欧氏距离（原有）
         double Eclidean_distance(const XYZRPY& pose) const {
             if(XYZRPYisnan() || pose.XYZRPYisnan()) {
@@ -218,11 +277,16 @@ namespace Ten
             }
             return _xyz.Eclidean_distance(pose._xyz);
         }
-    
+
         XYZ _xyz;
         RPY _rpy;
     };
-    
+
+    // ✅ 新增：XYZRPY标量左乘 double * XYZRPY
+    inline XYZRPY operator*(double scalar, const XYZRPY& p) {
+        return p * scalar;
+    }
+
 
 
     /**
