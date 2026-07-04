@@ -1,2 +1,0 @@
-livox_ros_driver:livox_ros_driver2:merge
--DCATKIN_DEVEL_PREFIX=/home/h/RC26_Vision_src/devel -DCMAKE_INSTALL_PREFIX=/home/h/RC26_Vision_src/install -G Unix Makefiles
