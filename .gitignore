@@ -1,4 +1,3 @@
-# Build
 build/
 devel/
 logs/
@@ -7,32 +6,12 @@ install/
 __pycache__/
 .catkin_tools/
 cmake-build-*/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Logs and debug output
-**/log/
-**/debug/
-
-# Images
-*.png
-*.jpg
-*.jpeg
-*.bmp
-
-# Backup / temp
-*~
-*.bak
-*.docx
-change*.md
-test.md
-learn/
-
-# Shell monitor
-src/merge/shell_monitor/.idea/
-src/merge/shell_monitor/*.png
-src/merge/shell_monitor/*.jpg
+*.bag
+*.pcd
+*.txt~
+*.log
+*.csv
+last/
+relocation.txt
+merge_test*.txt
+.DS_Store
