@@ -9,7 +9,6 @@
 #include "camera.h"
 #include "method_math.h"
 #include "lidar.h"
-#include "recognition/zbuffer_simplify.h"
 #include "relocation.h"
 #include "coordinate.h"
 #include "recognition/camera_calibration.h"
@@ -135,10 +134,8 @@ void test6(std::string s = "camera")
 
     while(ros::ok())
     {
-        cv::Mat* img = camera.camera_read(1);
-        // cv::imshow(s.c_str(), *img);
-        // cv::waitKey(30);
-        delete img;
+        cv::Mat img = camera.camera_read();
+
     }
     
 

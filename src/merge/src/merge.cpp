@@ -1,64 +1,6 @@
-#include "merge_func.cpp"
-
-
-
-
-
-// int main(int argc, char **argv)
-// {
-//     if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
-//     ros::console::notifyLoggerLevelsChanged();
-//     }
-
-//     ros::init(argc, argv, "merge_node");
-//     ros::NodeHandle nh;
-
-//     //test4();
-//     Ten::Ten_lidar::GetInstance("/home/maple/study2/merge_ws11/src/merge/src/livox_ros_driver2/config/MID360_config.json");
-//     Ten::ThreadPool pool(1);
-//     pool.enqueue(serial_send_lidar);
-
-//     laserMapping();
-//     Ten::Ten_lidar::GetInstance().~Ten_lidar();
-//     return 0;
-// }
-
-// int main(int argc, char **argv)
-// {
-//     if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
-//     ros::console::notifyLoggerLevelsChanged();
-//     }
-
-//     ros::init(argc, argv, "merge_node");
-//     ros::NodeHandle nh;
-
-//     test_save();
-//     return 0;
-// }
-
-
-// int main(int argc, char **argv)
-// {
-//     if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
-//     ros::console::notifyLoggerLevelsChanged();
-//     }
-
-//     ros::init(argc, argv, "merge_node");
-//     ros::NodeHandle nh;
-
-//     Ten::Ten_lidar::GetInstance("/home/maple/study2/merge_ws20/src/merge/src/livox_ros_driver2/config/MID360_config.json");
-//     Ten::ThreadPool pool(2);
-//     //pool.enqueue(zbuffer);
-//     pool.enqueue(odom);
-//     pool.enqueue(calibration_merge);
-//     //pool.enqueue(test_speed);
-    
-//     laserMapping();
-//     Ten::Ten_lidar::GetInstance().~Ten_lidar();
-
-//     return 0;
-// }
-
+//#include "merge_func.cpp"
+#include "control.cpp"
+#include "vision.cpp"
 
 
 /**
@@ -76,37 +18,131 @@ void sigintHandler(int sig)
     // 4. 关闭ROS节点（必须调用，否则ROS资源不会释放）
     
 
-    sleep(10);
-    std::cout<<"exit(0);"<< std::endl;
-    ros::shutdown();
-    exit(0);
-
+    // sleep(10);
+    // std::cout<<"exit(0);"<< std::endl;
+    // ros::shutdown();
+    // exit(0);
     // 注意：这里不要直接exit(0)，交给main函数执行return 0更优雅
 }
 
 
-int main(int argc, char **argv)
-{
-    if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
-        ros::console::notifyLoggerLevelsChanged();
-    }
+// int main(int argc, char **argv)
+// {
+//     if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
+//         ros::console::notifyLoggerLevelsChanged();
+//     }
 
-    //ros::init(argc, argv, "merge_node");
-    //关键：NoSigintHandler → 禁用ROS默认的SIGINT处理，改用自定义逻辑
+//     //ros::init(argc, argv, "merge_node");
+//     //关键：NoSigintHandler → 禁用ROS默认的SIGINT处理，改用自定义逻辑
     
-    ros::init(argc, argv, "merge_node", ros::init_options::NoSigintHandler);
+//     ros::init(argc, argv, "merge_node", ros::init_options::NoSigintHandler);
 
 
 
-    // ========== 第二步：创建NodeHandle（必须！否则ros::ok()无效） ==========
-    ros::NodeHandle nh;
-    //3. 注册自定义SIGINT信号处理函数（替换默认处理）
-    signal(SIGINT, sigintHandler);
+//     // ========== 第二步：创建NodeHandle（必须！否则ros::ok()无效） ==========
+//     ros::NodeHandle nh;
+//     //3. 注册自定义SIGINT信号处理函数（替换默认处理）
+//     signal(SIGINT, sigintHandler);
 
-    Ten::Ten_lidar::GetInstance("/home/h/RC2026/merge_ws22/src/merge/src/livox_ros_driver2/config/MID360_config.json");
-    Ten::ThreadPool pool(1);
-    pool.enqueue(zbuffer);
-    laserMapping();
 
-    return 0;
-}
+
+
+//     //Ten::Ten_lidar::GetInstance("/home/rc/RC_2026/merge_ws21/src/merge/src/livox_ros_driver2/config/MID360_config.json");
+//     Ten::ThreadPool pool(2);
+//     pool.enqueue(test_relocation);
+//     //pool.enqueue(serial_receiver);
+//     //laserMapping();
+
+//     return 0;
+// }
+
+
+
+
+#ifdef _R1_R1_
+    int main(int argc, char **argv)
+    {
+        if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
+            ros::console::notifyLoggerLevelsChanged();
+        }
+
+        //ros::init(argc, argv, "merge_node");
+        //关键：NoSigintHandler → 禁用ROS默认的SIGINT处理，改用自定义逻辑
+        
+        ros::init(argc, argv, "merge_node", ros::init_options::NoSigintHandler);
+
+
+
+        // ========== 第二步：创建NodeHandle（必须！否则ros::ok()无效） ==========
+        ros::NodeHandle nh;
+        //3. 注册自定义SIGINT信号处理函数（替换默认处理）
+        signal(SIGINT, sigintHandler);
+
+        std::cout << "🐋: " << "R1" << std::endl;
+        // std::string lidar_path = std::string(ROOT_DIR) + std::string("src/livox_ros_driver2/config/MID360_config.json");
+        // Ten::Ten_lidar::GetInstance(lidar_path);
+        // Ten::ThreadPool pool(2);
+        // pool.enqueue(serial_send_lidarR1);
+        // pool.enqueue(serial_receiver);
+        // laserMapping(); 
+        return 0;
+    }
+#elif defined(_R2_R2_)
+    int main(int argc, char **argv)
+    {
+        if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
+            ros::console::notifyLoggerLevelsChanged();
+        }
+
+        //ros::init(argc, argv, "merge_node");
+        //关键：NoSigintHandler → 禁用ROS默认的SIGINT处理，改用自定义逻辑
+        
+        ros::init(argc, argv, "merge_node", ros::init_options::NoSigintHandler);
+
+
+
+        // ========== 第二步：创建NodeHandle（必须！否则ros::ok()无效） ==========
+        ros::NodeHandle nh;
+        //3. 注册自定义SIGINT信号处理函数（替换默认处理）
+        signal(SIGINT, sigintHandler);
+
+        std::cout << "🐀: " << "R2" << std::endl;
+        // std::string lidar_path = std::string(ROOT_DIR) + std::string("src/livox_ros_driver2/config/MID360_config.json");
+        // Ten::Ten_lidar::GetInstance(lidar_path);
+        // Ten::ThreadPool pool(2);
+        // pool.enqueue(serial_send_lidarR2);
+        // pool.enqueue(serial_receiver);
+        // laserMapping(); 
+        return 0;
+    }
+#else
+    int main(int argc, char **argv)
+    {
+        if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug)) {
+            ros::console::notifyLoggerLevelsChanged();
+        }
+
+        //ros::init(argc, argv, "merge_node");
+        //关键：NoSigintHandler → 禁用ROS默认的SIGINT处理，改用自定义逻辑
+        
+        ros::init(argc, argv, "merge_node", ros::init_options::NoSigintHandler);
+
+
+
+        // ========== 第二步：创建NodeHandle（必须！否则ros::ok()无效） ==========
+        ros::NodeHandle nh;
+        //3. 注册自定义SIGINT信号处理函数（替换默认处理）
+        signal(SIGINT, sigintHandler);
+
+        std::cout << "🐅: " << "R0" << std::endl;
+        // std::string lidar_path = std::string(ROOT_DIR) + std::string("src/livox_ros_driver2/config/MID360_config.json");
+        // Ten::Ten_lidar::GetInstance(lidar_path);
+        Ten::ThreadPool pool(1);
+        //pool.enqueue(orb_test);
+        pool.enqueue(vision_test2);
+        //laserMapping();
+ 
+        
+        return 0;
+    }
+#endif

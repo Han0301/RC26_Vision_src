@@ -55,9 +55,9 @@ namespace Ten
         }
 
     private:
-    Ten::XYZRPY lidar_;
-    Ten::XYZRPY car_;
-    Ten::XYZRPY RT_;
+    Ten::XYZRPY lidar_;//雷达的速度
+    Ten::XYZRPY car_;//车的速度
+    Ten::XYZRPY RT_;//lidartocar
     std::mutex mtx_;
 
     };

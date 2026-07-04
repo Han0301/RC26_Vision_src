@@ -16,6 +16,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>         // PCD 格式读写
+//
 
 namespace Ten
 {
@@ -205,7 +206,14 @@ namespace Ten
      * @param T: 平移向量
      * @return cv::Mat:平移向量
      */
-    cv::Mat vector3dtotevc(Eigen::Vector3d T);
+    cv::Mat vector3dtotvec(Eigen::Vector3d T);
+
+    /**
+     * @brief 平移向量 tvec转Eigen::Vector3d
+     * @param tvec: 输入3x1的cv::Mat格式平移向量（CV_32FC1类型）
+     * @return Eigen::Vector3d: 输出Eigen::格式平移向量
+     */
+    Eigen::Vector3d tvectovector3d(cv::Mat tvec);
 
     /**
      * @brief 画调试图像
@@ -213,6 +221,25 @@ namespace Ten
      * @param imagePoints：2d点对
      */
     void debug_draw_img(cv::Mat& image, std::vector<cv::Point2f>& imagePoints);
+
+    /**
+     * @brief 获取路径
+     * @param txt_path: 文件路径
+     * @param map: 输入地图
+     * @param path： 输出路径
+     * @return bool: 读取是否成功
+     */
+    bool getpath(std::string txt_path, std::vector<int>& map, std::vector<int>& path);
+
+    /**
+     * @brief 读取txt文件并返回XYZRPY数组（修复版）
+     * @param filePath: txt的文件路径
+     * @return std::vector<Ten::XYZRPY>: Ten::XYZRPY的容器
+     */
+    std::vector<Ten::XYZRPY> readPoseFromTxt(const std::string& filePath);
+
+
+    
 
 }
 

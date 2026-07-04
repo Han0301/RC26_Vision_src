@@ -6,6 +6,14 @@
 #include <eigen3/Eigen/Core>       // 核心矩阵/向量
 #include <eigen3/Eigen/Geometry>   // 几何变换（旋转、平移）
 #include <opencv2/opencv.hpp>
+#include <fstream>
+#include <sstream>
+#include <dirent.h>
+#include <algorithm>
+#include <cstdlib>
+#include <cerrno>
+#include <cstring>
+#include <mutex>
 #include "../method_math.h"
 
 
@@ -18,12 +26,20 @@ namespace Ten
 class Ten_camerainfo
 {
 public:
-    Ten_camerainfo& operator=(const Ten_camerainfo& camerainfo) = delete;
-    Ten_camerainfo(const Ten_camerainfo& camerainfo) = delete;
+    //Ten_camerainfo& operator=(const Ten_camerainfo& camerainfo) = delete;
+    //Ten_camerainfo(const Ten_camerainfo& camerainfo) = delete;
+    
     Ten_camerainfo()
     {
         K_ = (cv::Mat_<double>(3,3) <<1380.4350, 0, 974.0183,0,  1385.0788, 541.4301, 0, 0, 1);
         distCoeffs_ = cv::Mat::zeros(5, 1, CV_64F);
+        // 修复：初始化rvec_/tvec_为3x1 CV_64F，避免空矩阵
+        rvec_ = cv::Mat::zeros(3, 1, CV_64F);
+        tvec_ = cv::Mat::zeros(3, 1, CV_64F);
+        // 初始化外参矩阵
+        extrinsic_.setIdentity();
+        R_.setIdentity();
+        T_.setZero();
     }
     ~Ten_camerainfo(){}
 
@@ -33,13 +49,15 @@ public:
      */
     void set_distCoeffs(cv::Mat distCoeffs)
     {
+        std::mutex mtx_;
         if(distCoeffs.rows != 5 || distCoeffs.cols != 1)
         {
             std::cout<< "distCoeffs.rows != 5 || distCoeffs.cols != 1" << std::endl;
             return;
         }
         std::lock_guard<std::mutex> lock(mtx_);
-        distCoeffs_ = distCoeffs;
+        //distCoeffs_ = distCoeffs;
+        distCoeffs.copyTo(distCoeffs_);
     }
 
     /**
@@ -48,13 +66,54 @@ public:
      */
     void set_K(cv::Mat K)
     {
+        std::mutex mtx_;
         if(K.rows != 3 || K.cols != 3)
         {
             std::cout<< "K.rows != 3 || K.cols != 3" << std::endl;
             return;
         }
         std::lock_guard<std::mutex> lock(mtx_);
-        K_ = K;
+        //K_ = K;
+        K.copyTo(K_);
+    }
+
+    /**
+     * @brief 设置外参RT
+     * @param rvec:旋转向量
+     * @param tvec:平移向量
+     */
+    void set_RT(cv::Mat rvec, cv::Mat tvec)
+    {
+        std::mutex mtx_;
+        if(rvec.rows != 3 && rvec.cols != 1)
+        {
+            std::cout<< "error! Eigen::Matrix3d RotationMatrixtorvec(cv::Mat rvec)" << std::endl;
+            return ;
+        }
+        if(tvec.rows != 3 && tvec.cols != 1)
+        {
+            std::cout<< "error! Eigen::Matrix3d RotationMatrixtorvec(cv::Mat tvec)" << std::endl;
+            return ;
+        }
+        std::lock_guard<std::mutex> lock(mtx_);
+        // rvec_ = rvec;
+        // tvec_ = tvec;
+        rvec.copyTo(rvec_);
+        tvec.copyTo(tvec_);
+        resetEXrt();
+    }
+
+    /**
+     * @brief 设置图片大小
+     * @param image_H: 图片高
+     * @param image_W: 图片宽
+     */
+    void set_HW(int image_H, int image_W)
+    {
+        std::mutex mtx_;
+        std::lock_guard<std::mutex> lock(mtx_);
+        image_H_ = image_H;
+        image_W_ = image_W;
     }
 
 
@@ -64,6 +123,7 @@ public:
      */
     void set_Extrinsic_Matrix(Eigen::Matrix4d extrinsic)
     {
+        std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         extrinsic_ = extrinsic;
         resetRTrt();
@@ -75,6 +135,7 @@ public:
      */
     void set_Extrinsic_Matrix(const double arr[4][4])
     {
+        std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         //extrinsic_ = extrinsic;
         for(size_t i = 0; i < 4; i++)
@@ -93,6 +154,7 @@ public:
      */
     Eigen::Matrix3d R() const
     {
+        std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return R_;
     }
@@ -103,6 +165,7 @@ public:
      */
     Eigen::Vector3d T() const
     {
+        std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return T_;
     }
@@ -111,20 +174,22 @@ public:
      * @brief 获取旋转向量
      * @return cv::Mat
      */
-    cv::Mat revc() const
+    cv::Mat rvec() const
     {
+        std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
-        return revc_;
+        return rvec_;
     }
 
     /**
      * @brief 获取平移向量
      * @return cv::Mat
      */    
-    cv::Mat tevc() const
+    cv::Mat tvec() const
     {
+        std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
-        return tevc_;
+        return tvec_;
     }
 
     /**
@@ -133,6 +198,7 @@ public:
      */    
     cv::Mat K() const 
     {
+        std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return K_;
     }
@@ -143,6 +209,7 @@ public:
      */    
     cv::Mat distCoeffs() const 
     {
+        std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return distCoeffs_;
     }
@@ -151,59 +218,69 @@ public:
      * @brief 获取变换矩阵
      * @return Eigen::Matrix4d
      */    
-    Eigen::Matrix4d extrinsic()
+    Eigen::Matrix4d extrinsic() const
     {
+        std::mutex mtx_;
         std::lock_guard<std::mutex> lock(mtx_);
         return extrinsic_;
     }
+
+    /**
+     * @brief 获取图片高
+     * @return int
+     */    
+    int H() const
+    {
+        return image_H_;
+    }
+
+    /**
+     * @brief 获取图片宽
+     * @return int
+     */    
+    int W() const
+    {
+        return image_W_;
+    }
+
 
 private:
     void resetRTrt() 
     {
         R_ = extrinsic_.block<3, 3>(0, 0);
         T_ = extrinsic_.block<3, 1>(0, 3);
-        revc_ = RotationMatrixtorvec(R_);
-        tevc_ = vector3dtotevc(T_);
+        rvec_ = RotationMatrixtorvec(R_);
+        tvec_ = vector3dtotvec(T_);
     }
-
+    void resetEXrt() 
+    {
+        R_ = rvectoRotationMatrix(rvec_);
+        T_ = tvectovector3d(tvec_);
+        extrinsic_.block<3, 3>(0, 0) = R_;
+        extrinsic_.block<3, 1>(0, 3) = T_;
+    }
 
 cv::Mat K_;
 cv::Mat distCoeffs_;
 Eigen::Matrix4d extrinsic_;
-cv::Mat revc_;
-cv::Mat tevc_;
+cv::Mat rvec_;
+cv::Mat tvec_;
 Eigen::Matrix3d R_;
 Eigen::Vector3d T_;
-mutable std::mutex mtx_;
+int image_H_ = 1080;
+int image_W_ = 1920;
+//mutable std::mutex mtx_;
 };
 
 
 
-// const cv::Mat& get_D435_K() {
-//     static const cv::Mat K = (cv::Mat_<double>(3,3) <<
-//         1380.4350, 0,        974.0183,
-//         0,        1385.0788, 541.4301,
-//         0,        0,        1);
-//     return K;
-// }
 
-
-// D435_ARR_PTR get_D435_E() {
-//     static const double arr[4][4] = {-0.0530959,  -0.998589,  -1.9891e-05,  0.0214,
-//                                     -0.0403182,  0.00216366,  -0.999185,  0.3877,
-//                                     0.997775,  -0.0530518,  -0.0403762,  0.4997,
-//                                     0,         0,           0,           1};
-//     return arr;
-// }
-
-// inline Ten_camerainfo& get_D435_CAMERAINFO() {
-//     static Ten_camerainfo cameraInfo(get_D435_K(), get_D435_E()); 
-//     return cameraInfo;
-// }
-
-
-// #define _D435_CAMERAINFO_ get_D435_CAMERAINFO()
-
+    /**
+     * @brief 核心函数：遍历文件夹并返回Ten_camerainfo容器
+     * @param rootDir: 总目录的文件夹路径
+     * @return std::vector<Ten::Ten_camerainfo>
+     */
+    std::vector<Ten::Ten_camerainfo> readCameraInfosFromDir(const std::string& rootDir);
 
 
 

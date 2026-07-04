@@ -82,7 +82,7 @@ namespace Ten
             // std::cout<< "camerainfo_.distCoeffs()" << camerainfo_.distCoeffs() << std::endl;
 
             //std::cout<< "object_3d_points[i]" << object_3d_points[0] << std::endl;
-            cv::projectPoints(object_3d_points, camerainfo_.revc(), camerainfo_.tevc(), camerainfo_.K(), camerainfo_.distCoeffs(), object_2d_points);
+            cv::projectPoints(object_3d_points, camerainfo_.rvec(), camerainfo_.tvec(), camerainfo_.K(), camerainfo_.distCoeffs(), object_2d_points);
             //std::cout<< "object_2d_points[i]" << object_2d_points[0] << std::endl;
             // for(size_t i = 0; i < object_2d_points.size(); i++)
             // {

@@ -179,6 +179,7 @@ namespace Ten
         }
         cv::Mat rot_matrix;
         cv::Rodrigues(rvec, rot_matrix);
+        //std::cout<<rot_matrix<<std::endl;
         Eigen::Matrix3d R;
         for(int i = 0; i < 3; i ++)
         {
@@ -291,12 +292,34 @@ namespace Ten
      * @param T: 平移向量
      * @return cv::Mat:平移向量
      */
-    cv::Mat vector3dtotevc(Eigen::Vector3d T)
+    cv::Mat vector3dtotvec(Eigen::Vector3d T)
     {
-        cv::Mat tevc;
+        cv::Mat tvec;
         //tevc = cv::Mat(3, 1, CV_32FC1, T.data()).clone();
-        tevc = (cv::Mat_<float>(3, 1) << T(0), T(1), T(2));
-        return tevc;
+        tvec = (cv::Mat_<float>(3, 1) << T(0), T(1), T(2));
+        return tvec;
+    }
+
+    /**
+     * @brief 平移向量 tvec转Eigen::Vector3d
+     * @param tvec: 输入3x1的cv::Mat格式平移向量（CV_32FC1类型）
+     * @return Eigen::Vector3d: 输出Eigen::格式平移向量
+     */
+    Eigen::Vector3d tvectovector3d(cv::Mat tvec)
+    {
+        // 第一步：校验tvec维度必须是3行1列，和你之前的rvec/tvec判断逻辑一致
+        if (tvec.rows != 3 || tvec.cols != 1)
+        {
+            std::cerr << "error! tvectovector3d: tvec must be 3x1 cv::Mat" << std::endl;
+            return Eigen::Vector3d::Zero(); // 维度错误返回零向量，避免程序崩溃
+        }
+        // 第三步：tvec转Eigen::Vector3d（两种写法，选一种即可，效果一致）
+        // 写法1：逐元素赋值，和你原函数vector3dtotvec的写法对称，直观易读
+        Eigen::Vector3d T;
+        T(0) = tvec.at<double>(0, 0);
+        T(1) = tvec.at<double>(1, 0);
+        T(2) = tvec.at<double>(2, 0);
+        return T;
     }
 
     /**
@@ -308,16 +331,243 @@ namespace Ten
     {
         for (int i = 0; i < imagePoints.size(); i += 4) 
         {
-            if (i < 96){
             cv::line(image, cv::Point(cvRound(imagePoints[i].x), cvRound(imagePoints[i].y)),cv::Point(cvRound(imagePoints[i+1].x), cvRound(imagePoints[i+1].y)),cv::Scalar(0, 0, 255), 2);
             cv::line(image, cv::Point(cvRound(imagePoints[i+1].x), cvRound(imagePoints[i+1].y)),cv::Point(cvRound(imagePoints[i+2].x), cvRound(imagePoints[i+2].y)),cv::Scalar(0, 0, 255), 2);
             cv::line(image, cv::Point(cvRound(imagePoints[i+2].x), cvRound(imagePoints[i+2].y)),cv::Point(cvRound(imagePoints[i+3].x), cvRound(imagePoints[i+3].y)),cv::Scalar(0, 0, 255), 2);
             cv::line(image, cv::Point(cvRound(imagePoints[i+3].x), cvRound(imagePoints[i+3].y)),cv::Point(cvRound(imagePoints[i].x), cvRound(imagePoints[i].y)),cv::Scalar(0, 0, 255), 2);
-            }
         } 
     }
 
+    /**
+     * @brief 获取路径
+     * @param txt_path: 文件路径
+     * @param map: 输入地图
+     * @param path： 输出路径
+     * @return bool: 读取是否成功
+     */
+    bool getpath(std::string txt_path, std::vector<int>& map, std::vector<int>& path)
+    {
+        // 创建一个map容器，键为string类型(编号)，值为vector<int>(数字集合)
+        // 用于存储文件中读取的编号及其对应的数字
+        std::map<std::string, std::vector<int>> data;
+
+        // 创建输入文件流对象，并尝试打开名为"data.txt"的文件
+        std::ifstream file(txt_path);
+
+        // 检查文件是否成功打开
+        if (!file.is_open()) {
+            // 如果文件无法打开，输出错误信息到标准错误流
+            std::cerr << "无法打开文件" << std::endl;
+            // 返回1表示程序异常退出
+            return false;
+        }
+        if(map.size()!= 12)
+        {
+            return false;
+        }
+
+        // 定义一个字符串变量line，用于存储从文件中读取的每一行
+        std::string line;
+
+        // 循环读取文件中的每一行，直到文件末尾
+        while (std::getline(file, line)) {
+            // 创建字符串流对象iss，并将当前行内容传入
+            std::istringstream iss(line);
+            // 定义字符串变量id，用于存储编号
+            std::string id;
+            // 从字符串流中读取第一个字符串作为编号
+            iss >> id;
+
+            // 创建vector<int>容器nums，用于存储当前编号对应的数字
+            std::vector<int> nums;
+            // 定义整数变量num，用于临时存储读取的数字
+            int num;
+
+            // 从字符串流中继续读取整数，直到行尾
+            while (iss >> num) {
+                // 将读取到的数字添加到vector容器中
+                nums.push_back(num);
+            }
+
+            // 将编号及其对应的数字集合存入map容器
+            data[id] = nums;
+        }
+
+        // 关闭文件流
+        file.close();
+        // 定义字符串变量inputId，用于存储用户输入的编号
+        //std::string inputId("242144342121");
+        std::string inputId;
+        for(int i = 0; i < map.size(); i++)
+        {
+            inputId += map[i] + '0';
+        }
+        // 创建一个包含12个整数的数组arr，并初始化为0
+        //int arr[12] = { 0 };
+
+        // 在map中查找用户输入的编号
+        auto it = data.find(inputId);
+
+        // 如果找到了对应的编号
+        if (it != data.end()) {
+
+            for (size_t i = 0; i < it->second.size(); ++i) {
+                //path[i] = it->second[i];
+                path.push_back(it->second[i]);
+            }
+
+            // 输出找到的编号及其对应的数组
+            std::cout << "找到编号 " << inputId << "，对应的数组为: ";
+            for (int i = 0; i < path.size(); ++i) {
+                std::cout << path[i] << " ";
+            }
+            std::cout << std::endl;
+            return true;
+        }
+        else {
+            // 如果未找到编号，输出提示信息
+            std::cout << "未找到编号 " << inputId << std::endl;
+            //std::exit(EXIT_SUCCESS);
+            return false;
+        }
+    }
+
+    /**
+     * @brief 读取txt文件并返回XYZRPY数组（修复版）
+     * @param filePath: txt的文件路径
+     * @return std::vector<Ten::XYZRPY>: Ten::XYZRPY的容器
+     */
+    std::vector<Ten::XYZRPY> readPoseFromTxt(const std::string& filePath)
+    {
+        std::vector<Ten::XYZRPY> poseList;
+        std::ifstream file(filePath);
+
+        // 检查文件是否成功打开
+        if (!file.is_open())
+        {
+            std::cerr << "Error: 无法打开文件 " << filePath << "，原因：" << strerror(errno) << std::endl;
+            return poseList;
+        }
+
+        std::string line;
+        Ten::XYZRPY currentPose;
+        bool isParsingPose = false; // 标记是否正在解析Pose段
+        // 新增：标记是否已解析到有效Pose数据（避免空数据块）
+        bool hasParsedPoseData = false;
+
+        // 逐行读取文件
+        while (std::getline(file, line))
+        {
+            // 去除行首尾的空白字符（空格、换行、制表符等）
+            line.erase(0, line.find_first_not_of(" \t\n\r"));
+            line.erase(line.find_last_not_of(" \t\n\r") + 1);
+
+            // 跳过空行
+            if (line.empty())
+                continue;
+
+            // 关键修复1：检测时间戳行（新Pose块开始），保存上一个Pose数据
+            // 时间戳特征：包含 "-" 和 ":"，且长度符合 1970-01-01 08:00:00.000000000
+            if (line.find("-") != std::string::npos && line.find(":") != std::string::npos && line.length() >= 26)
+            {
+                // 如果上一个Pose块有有效数据，先保存
+                if (hasParsedPoseData)
+                {
+                    poseList.push_back(currentPose);
+                    // 重置当前Pose和标记
+                    currentPose = Ten::XYZRPY();
+                    hasParsedPoseData = false;
+                }
+                continue;
+            }
+
+            // 检测Pose段开始
+            if (line == "Pose:")
+            {
+                isParsingPose = true;
+                continue;
+            }
+
+            // 检测Speed段开始（Pose段结束）
+            if (line == "Speed:")
+            {
+                isParsingPose = false;
+                // 关键修复2：Pose段结束时标记数据有效
+                hasParsedPoseData = true;
+                continue;
+            }
+
+            // 只处理Pose段内的行
+            if (isParsingPose)
+            {
+                // 分割键值对（格式：key: value）
+                size_t colonPos = line.find(':');
+                if (colonPos == std::string::npos)
+                    continue;
+
+                std::string key = line.substr(0, colonPos);
+                std::string valueStr = line.substr(colonPos + 1);
+                // 去除valueStr首尾空白
+                valueStr.erase(0, valueStr.find_first_not_of(" \t"));
+                valueStr.erase(valueStr.find_last_not_of(" \t") + 1);
+
+                double value = 0.0;
+                // 处理nan/-nan的情况
+                if (valueStr == "nan" || valueStr == "-nan")
+                {
+                    value = std::numeric_limits<double>::quiet_NaN();
+                }
+                else
+                {
+                    // 转换普通数值（增加失败检测）
+                    std::istringstream valueStream(valueStr);
+                    if (!(valueStream >> value))
+                    {
+                        std::cerr << "警告：解析数值失败，行内容：" << line << std::endl;
+                        continue;
+                    }
+                }
+
+                // 赋值到对应的字段
+                if (key == "x")
+                    currentPose._xyz._x = value;
+                else if (key == "y")
+                    currentPose._xyz._y = value;
+                else if (key == "z")
+                    currentPose._xyz._z = value;
+                else if (key == "roll")
+                    currentPose._rpy._roll = value;
+                else if (key == "pitch")
+                    currentPose._rpy._pitch = value;
+                else if (key == "yaw")
+                    currentPose._rpy._yaw = value;
+                
+                // 标记已解析到有效数据
+                hasParsedPoseData = true;
+            }
+        }
+
+        // 处理文件末尾最后一个未保存的Pose
+        if (hasParsedPoseData)
+        {
+            poseList.push_back(currentPose);
+        }
+
+        file.close();
+        // 调试：打印解析结果数量（可选）
+        std::cout << "解析完成，共读取到 " << poseList.size() << " 个Pose数据" << std::endl;
+        return poseList;
+    }
+    
+
+
+
+
+
 }
+
+
+
 
 #endif
 

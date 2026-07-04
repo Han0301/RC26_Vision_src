@@ -44,6 +44,7 @@
 
 //bool _is_running_ = false;
 std::atomic<bool> _is_running_{false};
+std::atomic<bool> _is_revise_{true};
 // extern std::mutex _lasermapping_;
 // extern bool __lasermapping_running_ ;
 // void imu_cbk2(const sensor_msgs::Imu::ConstPtr &msg_in); 
@@ -227,6 +228,51 @@ void Lddc::PublishPointcloud2(LidarDataQueue *queue, uint8_t index) {
 }
 
 
+void revise_lidar_R1(livox_ros_driver::CustomMsg& livox_msg)
+{
+    // 1. 获取当前消息中的点总数（循环的边界）
+    //sts::cout<<"revise_lidar(livox_ros_driver::CustomMsg& livox_msg)"<<std::endl;
+    size_t total_points = livox_msg.point_num;
+    // 2. 循环遍历每一个激光点
+    for (uint32_t i = 0; i < total_points; ++i) {
+        // 获取第i个点（使用const引用避免拷贝，提升效率）
+        livox_ros_driver::CustomPoint& single_point = livox_msg.points[i];
+
+        // 3. 访问点的核心字段（根据需求选择）
+        double x = single_point.x;          // X坐标 (单位：米)
+        double y = single_point.y;          // Y坐标 (单位：米)
+        double z = single_point.z;          // Z坐标 (单位：米)
+        // float intensity = single_point.reflectivity;  // 激光强度 (0~255)
+        // uint8_t line = single_point.line;          // 激光线号（Livox特有）
+        // uint8_t tag = single_point.tag;            // 点的标签（区分不同回波等）
+
+        single_point.x = x - y*sin(1.31 / 180.0 * M_PI);
+        single_point.y = y + x*sin(1.12 / 180.0 * M_PI);
+        single_point.z = z - x*sin(0.33 / 180.0 * M_PI);
+    }
+}
+
+void revise_lidar_R2(livox_ros_driver::CustomMsg& livox_msg)
+{
+    // 1. 获取当前消息中的点总数（循环的边界）
+    //sts::cout<<"revise_lidar(livox_ros_driver::CustomMsg& livox_msg)"<<std::endl;
+    size_t total_points = livox_msg.point_num;
+    // 2. 循环遍历每一个激光点
+    for (uint32_t i = 0; i < total_points; ++i) {
+        // 获取第i个点（使用const引用避免拷贝，提升效率）
+        livox_ros_driver::CustomPoint& single_point = livox_msg.points[i];
+
+        // 3. 访问点的核心字段（根据需求选择）
+        double x = single_point.x;          // X坐标 (单位：米)
+        double y = single_point.y;          // Y坐标 (单位：米)
+        double z = single_point.z;          // Z坐标 (单位：米)
+
+        single_point.x = x - y*sin(1.31 / 180.0 * M_PI);
+        single_point.y = y + x*sin(1.12 / 180.0 * M_PI);
+        single_point.z = z - x*sin(0.33 / 180.0 * M_PI);
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 void Lddc::PublishCustomPointcloud(LidarDataQueue *queue, uint8_t index) {
   while(!QueueIsEmpty(queue)) {
@@ -247,6 +293,16 @@ void Lddc::PublishCustomPointcloud(LidarDataQueue *queue, uint8_t index) {
     }
     if( _is_running_.load())
     {
+      if(_is_revise_.load())
+      {
+        #ifdef _R1_R1_
+          revise_lidar_R1(livox_msg);
+        #elif defined(_R2_R2_)
+          revise_lidar_R2(livox_msg);
+        #else
+          ;
+        #endif
+      }
       livox_pcl_cbk2(boost::make_shared<const livox_ros_driver::CustomMsg>(livox_msg));
       //Ten::_LIVOX_GET_.write_data(livox_msg);
     }

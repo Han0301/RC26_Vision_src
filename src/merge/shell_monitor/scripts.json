@@ -1,0 +1,22 @@
+[
+    {
+        "name": "MF",
+        "script": "scripts/use.sh",
+        "color": "#0dff17"
+    },
+    {
+        "name": "merge_launch",
+        "script": "scripts/merge_launch.sh",
+        "color": "#0dff17"
+    },
+    {
+        "name": "merge_node",
+        "script": "scripts/merge_node.sh",
+        "color": "#0dff17"
+    },
+    {
+        "name": "roscore",
+        "script": "scripts/roscore.sh",
+        "color": "#0dff17"
+    }
+]

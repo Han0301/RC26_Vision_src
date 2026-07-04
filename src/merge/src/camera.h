@@ -33,13 +33,13 @@ public:
     */
     cv::Mat camera_read();
 
-    /**
-        @brief 高效读取图片
-        @param int: 无实际意义，用于函数重载
-        @return cv::Mat* 外面要delete 对象
-    */
+    // /**
+    //     @brief 高效读取图片
+    //     @param int: 无实际意义，用于函数重载
+    //     @return cv::Mat* 外面要delete 对象
+    // */
 
-    cv::Mat* camera_read(int);
+    // cv::Mat* camera_read(int);
 
     ~Ten_camera()
     {

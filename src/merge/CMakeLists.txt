@@ -254,7 +254,18 @@ link_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/merge_node.cpp)
+add_library(nanoflann src/nano_gicp/src/nanoflann.cc)
+target_link_libraries(nanoflann ${PCL_LIBRARIES})
+### NanoGICP
+add_library(nano_gicp src/nano_gicp/src/nano_gicp.cc)
+target_link_libraries(nano_gicp ${PCL_LIBRARIES} ${EIGEN3_LIBS} ${OpenMP_LIBS} nanoflann)
+
+
 add_executable(merge_node src/merge.cpp)
+
+target_compile_definitions(merge_node PRIVATE
+  #_R1_R1_
+)
 #add_executable(merge2_node src/merge2.cpp)
 # add_executable(livox_ros_driver2_node src/livox_ros_driver2/src/livox_ros_driver2.cpp)
 # add_executable(pointlio_mapping src/point_lio/src/laserMapping.cpp 
@@ -320,10 +331,11 @@ target_sources(merge_node
   src/calibration.cpp
   src/threadpool.cpp
   src/log/logger.cpp
+  src/yolo/yolo_base.cpp
   src/recognition/world_to_camera.cpp
-  src/recognition/zbuffer_simplify.cpp
+  src/recognition/camera_calibration.cpp
+  #src/recognition/zbuffer_simplify.cpp
   src/recognition/occlusion_handing.cpp
-
   src/livox_ros_driver2/src/driver_node.cpp
   src/livox_ros_driver2/src/lds.cpp
   src/livox_ros_driver2/src/lds_lidar.cpp
@@ -394,6 +406,8 @@ target_link_libraries(merge_node
   openvino::runtime
   teaser_registration
   teaser_io
+  nano_gicp  # 关键：链接本地编译的nano_gicp库
+  nanoflann  # 可选：如果需要的话
 )
 
 

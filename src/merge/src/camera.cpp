@@ -130,22 +130,22 @@ namespace Ten
         return color_image;
     }
 
-    cv::Mat* Ten_camera::camera_read(int)
-    {
-        std::lock_guard<std::mutex> lock(read_mtx_);
-        // 等待并获取帧数据
-        rs2::frameset frames = pipe.wait_for_frames();
-        // 获取彩色帧
-        rs2::frame color_frame = frames.get_color_frame();
-        // 转换为OpenCV矩阵格式
-        cv::Mat* color_image = new cv::Mat(
-            cv::Size(_w, _h), 
-            CV_8UC3, 
-            (void*)color_frame.get_data(), 
-            cv::Mat::AUTO_STEP
-        );
-        return color_image;
-    }
+    // cv::Mat* Ten_camera::camera_read(int)
+    // {
+    //     std::lock_guard<std::mutex> lock(read_mtx_);
+    //     // 等待并获取帧数据
+    //     rs2::frameset frames = pipe.wait_for_frames();
+    //     // 获取彩色帧
+    //     rs2::frame color_frame = frames.get_color_frame();
+    //     // 转换为OpenCV矩阵格式
+    //     cv::Mat* color_image = new cv::Mat(
+    //         cv::Size(_w, _h), 
+    //         CV_8UC3, 
+    //         (void*)color_frame.get_data(), 
+    //         cv::Mat::AUTO_STEP
+    //     );
+    //     return color_image;
+    // }
 
 
 }

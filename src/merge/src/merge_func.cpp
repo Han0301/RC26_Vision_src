@@ -85,10 +85,95 @@
 
 // }
 
+void test_lidar()
+{
+    urcu_memb_register_thread();
+    float arr[9] = {0};
+
+    Ten::XYZRPY xyzrpy_error;
+    xyzrpy_error._xyz._x = 0;
+    xyzrpy_error._xyz._y = 0;
+    xyzrpy_error._xyz._z = 0;
+    xyzrpy_error._rpy._roll = 0;
+    xyzrpy_error._rpy._pitch = 0;
+    xyzrpy_error._rpy._yaw = 0;
+    Ten::_COORDINATE_TRANSFORMATION_.set_stead_state_error(xyzrpy_error);
+
+    Ten::XYZRPY xyzrpy_car;
+    xyzrpy_car._xyz._x = -0.40944; //-0.40944
+    xyzrpy_car._xyz._y = 0.40944 + 0.088 /2;  //0.40944
+    xyzrpy_car._xyz._z = 0;
+    xyzrpy_car._rpy._roll = 0;
+    xyzrpy_car._rpy._pitch = 0;
+    xyzrpy_car._rpy._yaw = -M_PI / 2.0;
+    //Ten::_COORDINATE_TRANSFORMATION_.set_lidartocar(xyzrpy_car); 
+    
+    
+    Ten::_VELOCITY_TRANSFORMATION_.set_RT(xyzrpy_car);
+    //nav_msgs::Odometry odo_n;
+    ros::Rate sl(1);
+    while(Ten::_TREADPOOL_FLAG_.read_flag())
+    {
+        //位置变化
+        nav_msgs::Odometry odo = Ten::_TF_GET_.read_data();
+        Ten::XYZRPY pose = Ten::Nav_Odometrytoxyzrpy(odo);
+        Ten::_COORDINATE_TRANSFORMATION_.set_worldtolidar(pose);
+        Ten::XYZRPY result = Ten::_COORDINATE_TRANSFORMATION_.getXYZRPY();
+        //速度变化
+        Ten::XYZRPY lidar_LA;
+        lidar_LA._xyz._x = odo.twist.twist.linear.x;
+        lidar_LA._xyz._y = odo.twist.twist.linear.y;
+        lidar_LA._xyz._z = odo.twist.twist.linear.z;
+        lidar_LA._rpy._roll = odo.twist.twist.angular.x;
+        lidar_LA._rpy._pitch = odo.twist.twist.angular.y;
+        lidar_LA._rpy._yaw = odo.twist.twist.angular.z;
+        Ten::_VELOCITY_TRANSFORMATION_.set_lidar(lidar_LA);
+        Ten::XYZRPY car_LA = Ten::_VELOCITY_TRANSFORMATION_.getvelocity();
+
+        float roll = result._rpy._roll;
+        float pitch = result._rpy._pitch;
+        float yaw = result._rpy._yaw;
+
+        arr[0] = result._xyz._x;
+        arr[1] = result._xyz._y;
+        arr[2] = result._xyz._z;
+        std::cout<<"x: "<< result._xyz._x <<std::endl;
+        std::cout<<"y: "<< result._xyz._y <<std::endl;
+        std::cout<<"z: "<< result._xyz._z <<std::endl;
+        std::cout<<"roll: "<< result._rpy._roll <<std::endl;
+        std::cout<<"pitch: "<< result._rpy._pitch <<std::endl;
+        std::cout<<"yaw: "<< result._rpy._yaw <<std::endl;
+
+        arr[3] = roll * 180.0 / M_PI;
+        arr[4] = pitch * 180.0 / M_PI;
+        arr[5] = yaw * 180.0 / M_PI;
+
+        arr[6] = car_LA._xyz._x;
+        arr[7] = car_LA._xyz._y;
+        arr[8] = car_LA._xyz._z;
+
+        //std::cout<<"sizeof(arr)"<<sizeof(arr)<<std::endl;
 
 
 
-void serial_send_lidar()
+        // odo_n.twist.twist.linear.x = result._xyz._x;
+        // odo_n.twist.twist.linear.y = result._xyz._y;
+        // odo_n.twist.twist.linear.z = result._xyz._z;
+
+        // odo_n.twist.twist.linear.x = car_LA._xyz._x;
+        // odo_n.twist.twist.linear.y = car_LA._xyz._y;
+        // odo_n.twist.twist.linear.z = car_LA._xyz._z;
+
+        //Ten::Ten_logger::GetInstance("/home/rc/RC_2026/merge_ws21/src/merge/log").record_odometry(odo_n);
+
+        sl.sleep();
+    }
+    
+    urcu_memb_unregister_thread();
+}
+
+
+void serial_send_lidarR1()
 {
     urcu_memb_register_thread();
     Ten::Ten_serial& serial = Ten::Ten_serial::GetInstance();
@@ -104,8 +189,8 @@ void serial_send_lidar()
     Ten::_COORDINATE_TRANSFORMATION_.set_stead_state_error(xyzrpy_error);
 
     Ten::XYZRPY xyzrpy_car;
-    xyzrpy_car._xyz._x = -0.40944;
-    xyzrpy_car._xyz._y = 0.40944;
+    xyzrpy_car._xyz._x = -0.40944; //-0.40944
+    xyzrpy_car._xyz._y = 0.40944 + 0.088 /2;  //0.40944
     xyzrpy_car._xyz._z = 0;
     xyzrpy_car._rpy._roll = 0;
     xyzrpy_car._rpy._pitch = 0;
@@ -114,15 +199,16 @@ void serial_send_lidar()
     
     
     Ten::_VELOCITY_TRANSFORMATION_.set_RT(xyzrpy_car);
-    nav_msgs::Odometry odo_n;
+    //nav_msgs::Odometry odo_n;
     ros::Rate sl(100);
     while(Ten::_TREADPOOL_FLAG_.read_flag())
     {
+        //位置变化
         nav_msgs::Odometry odo = Ten::_TF_GET_.read_data();
         Ten::XYZRPY pose = Ten::Nav_Odometrytoxyzrpy(odo);
         Ten::_COORDINATE_TRANSFORMATION_.set_worldtolidar(pose);
         Ten::XYZRPY result = Ten::_COORDINATE_TRANSFORMATION_.getXYZRPY();
-
+        //速度变化
         Ten::XYZRPY lidar_LA;
         lidar_LA._xyz._x = odo.twist.twist.linear.x;
         lidar_LA._xyz._y = odo.twist.twist.linear.y;
@@ -148,6 +234,70 @@ void serial_send_lidar()
         arr[6] = car_LA._xyz._x;
         arr[7] = car_LA._xyz._y;
         arr[8] = car_LA._xyz._z;
+
+        serial.serial_send(arr, 1, sizeof(arr));
+        //std::cout<<"sizeof(arr)"<<sizeof(arr)<<std::endl;
+
+
+
+        // odo_n.twist.twist.linear.x = result._xyz._x;
+        // odo_n.twist.twist.linear.y = result._xyz._y;
+        // odo_n.twist.twist.linear.z = result._xyz._z;
+
+        // odo_n.twist.twist.linear.x = car_LA._xyz._x;
+        // odo_n.twist.twist.linear.y = car_LA._xyz._y;
+        // odo_n.twist.twist.linear.z = car_LA._xyz._z;
+
+        //Ten::Ten_logger::GetInstance("/home/rc/RC_2026/merge_ws21/src/merge/log").record_odometry(odo_n);
+
+        sl.sleep();
+    }
+    
+    urcu_memb_unregister_thread();
+}
+
+void serial_send_lidarR2()
+{
+    urcu_memb_register_thread();
+    Ten::Ten_serial& serial = Ten::Ten_serial::GetInstance();
+    float arr[4] = {0};
+
+    Ten::XYZRPY xyzrpy_error;
+    xyzrpy_error._xyz._x = 0;
+    xyzrpy_error._xyz._y = 0;
+    xyzrpy_error._xyz._z = 0;
+    xyzrpy_error._rpy._roll = 0;
+    xyzrpy_error._rpy._pitch = 0;
+    xyzrpy_error._rpy._yaw = 0;
+    Ten::_COORDINATE_TRANSFORMATION_.set_stead_state_error(xyzrpy_error);
+
+    Ten::XYZRPY xyzrpy_car;
+    xyzrpy_car._xyz._x = 0;
+    xyzrpy_car._xyz._y = 0.23;
+    xyzrpy_car._xyz._z = 0;
+    xyzrpy_car._rpy._roll = 0;
+    xyzrpy_car._rpy._pitch = 0;
+    xyzrpy_car._rpy._yaw = 0;
+    Ten::_COORDINATE_TRANSFORMATION_.set_lidartocar(xyzrpy_car); 
+    
+    //nav_msgs::Odometry odo_n;
+    ros::Rate sl(100);
+    while(Ten::_TREADPOOL_FLAG_.read_flag())
+    {
+        nav_msgs::Odometry odo = Ten::_TF_GET_.read_data();
+        Ten::XYZRPY pose = Ten::Nav_Odometrytoxyzrpy(odo);
+        Ten::_COORDINATE_TRANSFORMATION_.set_worldtolidar(pose);
+        Ten::XYZRPY result = Ten::_COORDINATE_TRANSFORMATION_.getXYZRPY();
+
+
+        float roll = result._rpy._roll;
+        float pitch = result._rpy._pitch;
+        float yaw = result._rpy._yaw;
+
+        arr[0] = result._xyz._x;
+        arr[1] = result._xyz._y;
+        arr[2] = result._xyz._z;
+        arr[4] = yaw * 180.0 / M_PI;
 
         serial.serial_send(arr, 1, sizeof(arr));
         //std::cout<<"sizeof(arr)"<<sizeof(arr)<<std::endl;
@@ -233,7 +383,7 @@ void zbuffer()
     image_transport::Publisher pub_img = it.advertise("pub_image_topic", 2);
     //初始化相机
     Ten::Ten_camera& camera =  Ten::Ten_camera::GetInstance();
-    Ten::Ten_logger& log = Ten::Ten_logger::GetInstance("/home/h/rc26_log/log");
+    Ten::Ten_logger& log = Ten::Ten_logger::GetInstance("/home/maple/study2/merge_ws22/src/merge/log");
     //初始化yolo11-cls
     int arr[31] = {1, 10, 11, 12, 13, 14, 15, 16, 17,18, 19, 2 ,20 ,21 ,22 ,23 ,24, 25 ,26 ,27 ,28 ,29, 3 ,30, 31, 4 ,5 ,6, 7, 8 ,9};
     std::vector<int> map;
@@ -241,7 +391,7 @@ void zbuffer()
     {
         map.push_back(arr[i]);
     }    
-    Ten::Ten_yolo_cls detector("/home/h/package/hou_li_11cls_1224/best", map);
+    Ten::Ten_yolo_cls detector("/home/maple/study2/model/best_openvino_model/best", map);
     Ten::Ten_map map_s;
     sleep(5);
     //打印sleep()
@@ -266,7 +416,7 @@ void zbuffer()
     std::cout<< "tevc: " << Ten::_CAMERA_TRANSFORMATION_.camerainfo_.tevc() << std::endl;
 
     //重定位
-    std::cout << "-----------------------是否重定位---  -----------------------"<<std::endl;
+    std::cout << "-----------------------是否重定位--------------------------"<<std::endl;
     //sleep(20);
     string input;
     std::cin >> input;
@@ -313,20 +463,21 @@ void zbuffer()
     Ten::_CAMERA_TRANSFORMATION_.set_worldtolidar(tf);
     Ten::_CAMERA_TRANSFORMATION_.set_error(error);
 
-        //坐标变换
-        Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(Ten::_INIT_3D_BOX_.pcl_LM_plum_object_points_, 
-            Ten::_INIT_3D_BOX_.pcl_C_plum_object_points_, Ten::_INIT_3D_BOX_.object_plum_2d_points_);
-        //转pcl到C
-        Ten::_INIT_3D_BOX_.pcl_to_C();
+    Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(Ten::_INIT_3D_BOX_.pcl_LS_plum_object_points_, 
+        Ten::_INIT_3D_BOX_.pcl_C_plum_object_points_, Ten::_INIT_3D_BOX_.object_plum_points);
+    Ten::_INIT_3D_BOX_.split_2d_points();
 
-        Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_(image, Ten::_INIT_3D_BOX_.C_object_plum_points_, 
-        Ten::_INIT_3D_BOX_.object_plum_2d_points_ ,Ten::_INIT_3D_BOX_.box_lists_);
+    Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_init(Ten::_INIT_3D_BOX_.C_object_points_, Ten::_INIT_3D_BOX_.C_plum_points_, 
+        Ten::_INIT_3D_BOX_.object_2d_points, Ten::_INIT_3D_BOX_.plum_2d_points,
+        Ten::_INIT_3D_BOX_.object_2d_points_, Ten::_INIT_3D_BOX_.plum_2d_points_);
+
+    Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_(image,  Ten::_INIT_3D_BOX_.object_2d_points_, 
+        Ten::_INIT_3D_BOX_.plum_2d_points_ ,Ten::_INIT_3D_BOX_.box_lists_);
 
     //模型初步筛选
     int _debug_count_zbuffer_flag_z_size = 0;
     int _debug_count_zbuffer_flag_o_size = 0;
     std::vector<Ten::box>& box_lists = Ten::_INIT_3D_BOX_.box_lists_;
-    std::vector<Ten::score>& score_lists = Ten::_INIT_3D_BOX_.score_lists_;
     for(int i = 0; i < box_lists.size(); i++)
     {
         if(box_lists[i].zbuffer_flag == 1)
@@ -351,7 +502,7 @@ void zbuffer()
     std::cout<< "_debug_count_zbuffer_flag_z_size: "<< _debug_count_zbuffer_flag_z_size << std::endl;
     std::cout<< "_debug_count_zbuffer_flag_o_size: "<< _debug_count_zbuffer_flag_o_size << std::endl;
     //用比较好的图像初始化standard_hsv
-    Ten::_ZBUFFER_SIMPLIFY_.set_hsv_topn_stand(Ten::_INIT_3D_BOX_.box_lists_, Ten::_INIT_3D_BOX_.score_lists_,5);
+    Ten::_ZBUFFER_SIMPLIFY_.set_standard_hsv_(box_lists);
     log.record_image(Ten::_INIT_3D_BOX_.box_lists_);
     //sleep(3);
     ros::Rate sl(10);
@@ -375,36 +526,27 @@ void zbuffer()
         //设置世界到雷达
         Ten::_CAMERA_TRANSFORMATION_.set_worldtolidar(tf);
         //坐标变换
-        Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(Ten::_INIT_3D_BOX_.pcl_LM_plum_object_points_, 
-            Ten::_INIT_3D_BOX_.pcl_C_plum_object_points_, Ten::_INIT_3D_BOX_.object_plum_2d_points_);
-        //转pcl到C
-        Ten::_INIT_3D_BOX_.pcl_to_C();
+        Ten::_CAMERA_TRANSFORMATION_.pcl_transform_world_to_camera(Ten::_INIT_3D_BOX_.pcl_LS_plum_object_points_, 
+            Ten::_INIT_3D_BOX_.pcl_C_plum_object_points_, Ten::_INIT_3D_BOX_.object_plum_points);
+        //拆分
+        Ten::_INIT_3D_BOX_.split_2d_points();
 
-        Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_(image, Ten::_INIT_3D_BOX_.C_object_plum_points_, 
-        Ten::_INIT_3D_BOX_.object_plum_2d_points_ ,Ten::_INIT_3D_BOX_.box_lists_);
+
+
+        //初始化zb用的数据
+        Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_init(Ten::_INIT_3D_BOX_.C_object_points_, Ten::_INIT_3D_BOX_.C_plum_points_, 
+            Ten::_INIT_3D_BOX_.object_2d_points, Ten::_INIT_3D_BOX_.plum_2d_points,
+            Ten::_INIT_3D_BOX_.object_2d_points_, Ten::_INIT_3D_BOX_.plum_2d_points_);
+
+        //zb
+        Ten::_ZBUFFER_SIMPLIFY_.set_box_lists_(image_in,  Ten::_INIT_3D_BOX_.object_2d_points_, 
+            Ten::_INIT_3D_BOX_.plum_2d_points_ ,Ten::_INIT_3D_BOX_.box_lists_);
+        std::vector<Ten::box>& box_lists = Ten::_INIT_3D_BOX_.box_lists_;
 
         //判断空
-        Ten::_ZBUFFER_SIMPLIFY_.set_hsv_topn_score(Ten::_INIT_3D_BOX_.box_lists_, Ten::_INIT_3D_BOX_.score_lists_,5);
+        Ten::_ZBUFFER_SIMPLIFY_.set_HSV_exist_boxes_(box_lists);
 
-        for(int i = 0;i < Ten::_INIT_3D_BOX_.score_lists_.size(); i ++)
-        {
-            std::cout << "idx : "<< Ten::_INIT_3D_BOX_.score_lists_[i].idx << ", score: " << Ten::_INIT_3D_BOX_.score_lists_[i].hsv_score << std::endl; 
-
-            if (Ten::_INIT_3D_BOX_.score_lists_[i].hsv_score  < 0){
-                continue;
-            }
-            std::cout << "set_hsv_topn_stand(5): " << Ten::_ZBUFFER_SIMPLIFY_.get_standard_hsv_()[0] << "  " << Ten::_ZBUFFER_SIMPLIFY_.get_standard_hsv_()[1] << "  " << Ten::_ZBUFFER_SIMPLIFY_.get_standard_hsv_()[2] << "  "<< std::endl;
-            for(int j = 0; j < 5; j++ )
-            {
-                std::cout << "    j:"<< j << std::endl;
-                std::cout << "   top_n_h: "<<Ten::_INIT_3D_BOX_.score_lists_[i].top_n_h[j].position << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_h[j].count
-                        << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_h[j].degree_of_promacy << std::endl;
-                std::cout << "   top_n_s: "<<Ten::_INIT_3D_BOX_.score_lists_[i].top_n_s[j].position << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_s[j].count
-                        << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_s[j].degree_of_promacy << std::endl;
-                std::cout << "   top_n_v: "<<Ten::_INIT_3D_BOX_.score_lists_[i].top_n_v[j].position << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_v[j].count
-                        << ", " << Ten::_INIT_3D_BOX_.score_lists_[i].top_n_v[j].degree_of_promacy << std::endl;
-            }
-        } 
+        
 
 
         //模型初步筛选
@@ -459,14 +601,14 @@ void zbuffer()
 
         //发布调试图像
         cv::Mat debug_best_roi_image = cv::Mat::zeros(480, 640, CV_8UC3);
-        Ten::_ZBUFFER_SIMPLIFY_.set_debug_roi_image(box_lists, score_lists, debug_best_roi_image);
+        Ten::_ZBUFFER_SIMPLIFY_.set_debug_roi_image(box_lists, debug_best_roi_image);
         sensor_msgs::ImagePtr pub_debug_roi_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", debug_best_roi_image).toImageMsg();
         //调试图像
         //Ten::debug_draw_img(image_in, Ten::_INIT_3D_BOX_.object_2d_points);
-        //Ten::debug_draw_img(image_in, Ten::_INIT_3D_BOX_.object_plum_2d_points_);
-        sensor_msgs::ImagePtr pub_debug_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image_in).toImageMsg();
+        cv::Mat debug_raw_img = Ten::_ZBUFFER_SIMPLIFY_.update_debug_image(image_in, Ten::_INIT_3D_BOX_.object_2d_points_);
+        sensor_msgs::ImagePtr pub_debug_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", debug_raw_img).toImageMsg();
         debug_roi_pub.publish(pub_debug_roi_msg);
-        pub_img.publish(pub_debug_img_msg);
+        // pub_img.publish(pub_debug_img_msg);
 
         int cout = 0;
         for(int i = 0; i < 12; i++)

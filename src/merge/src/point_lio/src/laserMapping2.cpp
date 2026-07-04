@@ -28,7 +28,7 @@ using namespace std;
 
 const float MOV_THRESHOLD = 1.5f;
 
-string root_dir = ROOT_DIR;
+//string root_dir = ROOT_DIR;
 
 int time_log_counter = 0; //, publish_count = 0;
 
@@ -60,43 +60,47 @@ geometry_msgs::PoseStamped msg_body_pose;
 //     sig_buffer.notify_all();
 // }
 
-inline void dump_lio_state_to_log(FILE *fp)  
-{
-    V3D rot_ang;
-    if (!use_imu_as_input)
-    {
-        rot_ang = SO3ToEuler(kf_output.x_.rot);
-    }
-    else
-    {
-        rot_ang = SO3ToEuler(kf_input.x_.rot);
-    }
+
+
+// inline void dump_lio_state_to_log(FILE *fp)  
+// {
+//     V3D rot_ang;
+//     if (!use_imu_as_input)
+//     {
+//         rot_ang = SO3ToEuler(kf_output.x_.rot);
+//     }
+//     else
+//     {
+//         rot_ang = SO3ToEuler(kf_input.x_.rot);
+//     }
     
-    fprintf(fp, "%lf ", Measures.lidar_beg_time - first_lidar_time);
-    fprintf(fp, "%lf %lf %lf ", rot_ang(0), rot_ang(1), rot_ang(2));                   // Angle
-    if (use_imu_as_input)
-    {
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.pos(0), kf_input.x_.pos(1), kf_input.x_.pos(2)); // Pos  
-        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // omega  
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.vel(0), kf_input.x_.vel(1), kf_input.x_.vel(2)); // Vel  
-        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // Acc  
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.bg(0), kf_input.x_.bg(1), kf_input.x_.bg(2));    // Bias_g  
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.ba(0), kf_input.x_.ba(1), kf_input.x_.ba(2));    // Bias_a  
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.gravity(0), kf_input.x_.gravity(1), kf_input.x_.gravity(2)); // Bias_a  
-    }
-    else
-    {
-        fprintf(fp, "%lf %lf %lf ", kf_output.x_.pos(0), kf_output.x_.pos(1), kf_output.x_.pos(2)); // Pos  
-        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // omega  
-        fprintf(fp, "%lf %lf %lf ", kf_output.x_.vel(0), kf_output.x_.vel(1), kf_output.x_.vel(2)); // Vel  
-        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // Acc  
-        fprintf(fp, "%lf %lf %lf ", kf_output.x_.bg(0), kf_output.x_.bg(1), kf_output.x_.bg(2));    // Bias_g  
-        fprintf(fp, "%lf %lf %lf ", kf_output.x_.ba(0), kf_output.x_.ba(1), kf_output.x_.ba(2));    // Bias_a  
-        fprintf(fp, "%lf %lf %lf ", kf_output.x_.gravity(0), kf_output.x_.gravity(1), kf_output.x_.gravity(2)); // Bias_a  
-    }
-    fprintf(fp, "\r\n");  
-    fflush(fp);
-}
+//     fprintf(fp, "%lf ", Measures.lidar_beg_time - first_lidar_time);
+//     fprintf(fp, "%lf %lf %lf ", rot_ang(0), rot_ang(1), rot_ang(2));                   // Angle
+//     if (use_imu_as_input)
+//     {
+//         fprintf(fp, "%lf %lf %lf ", kf_input.x_.pos(0), kf_input.x_.pos(1), kf_input.x_.pos(2)); // Pos  
+//         fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // omega  
+//         fprintf(fp, "%lf %lf %lf ", kf_input.x_.vel(0), kf_input.x_.vel(1), kf_input.x_.vel(2)); // Vel  
+//         fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // Acc  
+//         fprintf(fp, "%lf %lf %lf ", kf_input.x_.bg(0), kf_input.x_.bg(1), kf_input.x_.bg(2));    // Bias_g  
+//         fprintf(fp, "%lf %lf %lf ", kf_input.x_.ba(0), kf_input.x_.ba(1), kf_input.x_.ba(2));    // Bias_a  
+//         fprintf(fp, "%lf %lf %lf ", kf_input.x_.gravity(0), kf_input.x_.gravity(1), kf_input.x_.gravity(2)); // Bias_a  
+//     }
+//     else
+//     {
+//         fprintf(fp, "%lf %lf %lf ", kf_output.x_.pos(0), kf_output.x_.pos(1), kf_output.x_.pos(2)); // Pos  
+//         fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // omega  
+//         fprintf(fp, "%lf %lf %lf ", kf_output.x_.vel(0), kf_output.x_.vel(1), kf_output.x_.vel(2)); // Vel  
+//         fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // Acc  
+//         fprintf(fp, "%lf %lf %lf ", kf_output.x_.bg(0), kf_output.x_.bg(1), kf_output.x_.bg(2));    // Bias_g  
+//         fprintf(fp, "%lf %lf %lf ", kf_output.x_.ba(0), kf_output.x_.ba(1), kf_output.x_.ba(2));    // Bias_a  
+//         fprintf(fp, "%lf %lf %lf ", kf_output.x_.gravity(0), kf_output.x_.gravity(1), kf_output.x_.gravity(2)); // Bias_a  
+//     }
+//     fprintf(fp, "\r\n");  
+//     fflush(fp);
+// }
+
+
 
 void pointBodyLidarToIMU(PointType const * const pi, PointType * const po)
 {
@@ -285,16 +289,16 @@ void publish_frame_world(const ros::Publisher & pubLaserCloudFullRes)
 
         static int scan_wait_num = 0;
         scan_wait_num ++;
-        if (pcl_wait_save->size() > 0 && scan_wait_num >= pcd_save_interval)
-        {
-            pcd_index ++;
-            string all_points_dir(string(string(ROOT_DIR) + "PCD/scans_") + to_string(pcd_index) + string(".pcd"));
-            pcl::PCDWriter pcd_writer;
-            cout << "current scan saved to /PCD/" << all_points_dir << endl;
-            pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
-            pcl_wait_save->clear();
-            scan_wait_num = 0;
-        }
+        // if (pcl_wait_save->size() > 0 && scan_wait_num >= pcd_save_interval)
+        // {
+        //     pcd_index ++;
+        //     string all_points_dir(string(string(ROOT_DIR) + "PCD/scans_") + to_string(pcd_index) + string(".pcd"));
+        //     pcl::PCDWriter pcd_writer;
+        //     cout << "current scan saved to /PCD/" << all_points_dir << endl;
+        //     pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
+        //     pcl_wait_save->clear();
+        //     scan_wait_num = 0;
+        // }
     }
 }
 
@@ -491,11 +495,11 @@ int laserMapping()
     Eigen::Matrix<double, 24, 24> Q_input = process_noise_cov_input();
     Eigen::Matrix<double, 30, 30> Q_output = process_noise_cov_output();
     /*** debug record ***/
-    FILE *fp;
-    //string pos_log_dir = root_dir + "/Log/pos_log.txt";
-    string pos_log_dir = root_dir + "Log/pos_log.txt";
-    fp = fopen(pos_log_dir.c_str(),"w");
-    open_file();
+    // FILE *fp;
+    // //string pos_log_dir = root_dir + "/Log/pos_log.txt";
+    // string pos_log_dir = root_dir + "Log/pos_log.txt";
+    // fp = fopen(pos_log_dir.c_str(),"w");
+    // open_file();
 
     /*** ROS subscribe initialization ***/
     // ros::Subscriber sub_pcl = p_pre->lidar_type == AVIA ? 
@@ -1213,7 +1217,7 @@ int laserMapping()
                         fout_out << setw(20) << Measures.lidar_beg_time - first_lidar_time << " " << euler_cur.transpose() << " " << kf_input.x_.pos.transpose() << " " << kf_input.x_.vel.transpose() <<" "<<kf_input.x_.bg.transpose()<<" "<<kf_input.x_.ba.transpose()<<" "<<kf_input.x_.gravity.transpose()<<" "<<feats_undistort->points.size()<<endl;
                     }
                 }
-                dump_lio_state_to_log(fp);
+                //dump_lio_state_to_log(fp);
             }
         }
         
@@ -1230,13 +1234,13 @@ int laserMapping()
     //--------------------------save map-----------------------------------
     /* 1. make sure you have enough memories
     /* 2. noted that pcd save will influence the real-time performences **/
-    if (pcl_wait_save->size() > 0 && pcd_save_en)
-    {
-        string file_name = string("scans.pcd");
-        string all_points_dir(string(string(ROOT_DIR) + "PCD/") + file_name);
-        pcl::PCDWriter pcd_writer;
-        pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
-    }
+    // if (pcl_wait_save->size() > 0 && pcd_save_en)
+    // {
+    //     string file_name = string("scans.pcd");
+    //     string all_points_dir(string(string(ROOT_DIR) + "PCD/") + file_name);
+    //     pcl::PCDWriter pcd_writer;
+    //     pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
+    // }
     fout_out.close();
     fout_imu_pbp.close();
 

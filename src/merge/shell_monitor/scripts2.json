@@ -1,0 +1,102 @@
+[
+    {
+        "name": "vision",
+        "script": "scripts/1.sh",
+        "color": "#0dff17"
+    },
+    {
+        "name": "camera",
+        "script": "scripts/hik_camera.sh",
+        "color": "#0dff17"
+    },
+    {
+        "name": "roscore",
+        "script": "scripts/roscore.sh",
+        "color": "#dc1117"
+    },
+    {
+        "name": "stop_roscore",
+        "script": "scripts/stop_roscore.sh",
+        "color": "#f31117"
+    },
+    {
+        "name": "load_controllers",
+        "script": "scripts/load_controller.sh",
+        "color": "#0dff17"
+    },
+    {
+        "name": "topic_monitor",
+        "script": "scripts/topic_monitor.sh",
+        "color": "#0dee17"
+    },
+    {
+        "name": "restart_all",
+        "script": "scripts/restart_all.sh",
+        "color": "#0dfe17"
+    },
+    {
+        "name": "stop_controller",
+        "script": "scripts/stop_controller.sh",
+        "color": "#ff0000"
+    },
+    {
+        "name": "restart_controllers",
+        "script": "scripts/restart_controller.sh",
+        "color": "#0df817"
+    },
+    {
+        "name": "stop_all",
+        "script": "scripts/stop_all.sh",
+        "color": "#ff0000"
+    },
+    {
+        "name": "start_all",
+        "script": "scripts/start_all.sh",
+        "color": "#00ff00"
+    },
+    {
+        "name": "start_ctrl",
+        "script": "scripts/start_ctrl.sh",
+        "color": "#0dff17"
+    },
+    {
+        "name": "load_ctrl_hw",
+        "script": "scripts/load_control_hw.sh",
+        "color": "#0dff17"
+    },
+    {
+        "name": "Game_start_all",
+        "script": "scripts/game_start_all.sh",
+        "color": "#ffff17"
+    },
+    {
+        "name": "Game_load_controllers",
+        "script": "scripts/game_load_controller.sh",
+        "color": "#feff17"
+    },
+    {
+        "name": "Gane_start_ctrl",
+        "script": "scripts/game_start_ctrl.sh",
+        "color": "#ffff17"
+    },
+    {
+        "name": "Game_stop_all",
+        "script": "scripts/game_stop_all.sh",
+        "color": "#ffff17"
+    },
+    {
+        "name": "Game_stop_controllers",
+        "script": "scripts/game_stop_controllers.sh",
+        "color": "#ffff17"
+    },
+    {
+        "name": "vision2",
+        "script": "scripts/2.sh",
+        "color": "#0df017"
+    },
+    {
+        "name": "vision_blue",
+        "script": "scripts/1_blue.sh",
+        "color": "#ffff17"
+    }
+]

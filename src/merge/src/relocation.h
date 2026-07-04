@@ -19,6 +19,9 @@
 #include <Eigen/Dense>
 #include <cmath>
 #include <pcl/registration/icp.h>
+#include "./nano_gicp/include/nano_gicp/point_type_nano_gicp.hpp"
+#include "./nano_gicp/include/nano_gicp/nano_gicp.hpp"
+
 
 namespace Ten
 {
@@ -133,7 +136,12 @@ public:
         pcl::transformPointCloud(*local_cloud, *local_cloud_raw, transform_matrix_raw);
         // Eigen::Matrix4d transform_matrix_raw_2 = process_teaser(global_cloud_, local_cloud_raw, 0.3);
         // Eigen::Matrix4d transform_matrix_mix = transform_matrix_raw_2 * transform_matrix_raw;
-        Eigen::Matrix4d transform_matrix_raw_2 = process_icp(global_cloud_, local_cloud_raw, 0.5);
+
+
+        //Eigen::Matrix4d transform_matrix_raw_2 = process_icp(global_cloud_, local_cloud_raw, 0.5);
+        Eigen::Matrix4d transform_matrix_raw_2 = process_nano_gicp(global_cloud_, local_cloud_raw, 0.5);
+
+
         Eigen::Matrix4d transform_matrix_mix = transform_matrix_raw_2 * transform_matrix_raw;
         Eigen::Matrix4d inverse_transform = transform_matrix_mix.inverse();
         return Ten::transform_matrixtoXYZRPY(inverse_transform);
@@ -348,6 +356,62 @@ private:
         std::cout << "  - 拟合分数（越小越好）：" << icp.getFitnessScore() << std::endl;
         std::cout << "  - 变换矩阵：\n" << transformation << std::endl;
 
+        return transformation;
+    }
+
+    /**
+     * @brief 基于NanoGICP的点云配准函数（完全兼容原ICP模板结构）
+     * @param target_cloud 参考目标点云（如全局地图）
+     * @param source_cloud 待配准源点云（如当前局部地图）
+     * @param size 体素下采样分辨率（单位：米）
+     * @return 配准后的4×4齐次变换矩阵（source → target的位姿变换）
+     */
+    Eigen::Matrix4d process_nano_gicp(const typename PointCloudT::Ptr& target_cloud, const typename PointCloudT::Ptr& source_cloud, float size)
+    {
+        // 1. 输入合法性检查（保留原有）
+        if (source_cloud->empty() || target_cloud->empty()) {
+            std::cerr << "[ERROR] 源点云或目标点云为空！" << std::endl;
+            return Eigen::Matrix4d::Identity();
+        }
+        Eigen::Matrix4d transformation = Eigen::Matrix4d::Identity();
+    
+        // 2. 点云预处理（保留原有）
+        typename PointCloudT::Ptr global_cloud_downsampled(new PointCloudT);
+        typename PointCloudT::Ptr local_cloud_downsampled(new PointCloudT);
+        voxelDownSample(target_cloud, global_cloud_downsampled, size);
+        voxelDownSample(source_cloud, local_cloud_downsampled, size);
+    
+        // ===================== 核心修复：修正NanoGICP命名空间 =====================
+        nano_gicp::NanoGICP<PointT, PointT> nano_gicp;  // 从pcl::改为nano_gicp::
+    
+        // 3. 设置输入点云（保留原有，变量名正确）
+        nano_gicp.setInputSource(local_cloud_downsampled);
+        nano_gicp.setInputTarget(global_cloud_downsampled);
+    
+        // 4. 设置参数（保留原有）
+        nano_gicp.setMaximumIterations(200);
+        nano_gicp.setTransformationEpsilon(1e-8);
+        nano_gicp.setMaxCorrespondenceDistance(0.55);
+        nano_gicp.setEuclideanFitnessEpsilon(1e-6);
+        nano_gicp.setCorrespondenceRandomness(20);
+    
+        // 5. 执行配准（保留原有）
+        PointCloudT temp_cloud;
+        nano_gicp.align(temp_cloud);
+    
+        // 后续逻辑（收敛判断、矩阵转换、日志输出）均保留原有，无需修改
+        if (!nano_gicp.hasConverged()) {
+            std::cerr << "[WARNING] NanoGICP配准未收敛！" << std::endl;
+            return Eigen::Matrix4d::Identity();
+        }
+    
+        Eigen::Matrix4f trans_float = nano_gicp.getFinalTransformation();
+        transformation = trans_float.cast<double>();
+    
+        std::cout << "[INFO] NanoGICP配准完成：" << std::endl;
+        std::cout << "  - 拟合分数（越小越好）：" << nano_gicp.getFitnessScore() << std::endl;
+        std::cout << "  - 变换矩阵：\n" << transformation << std::endl;
+    
         return transformation;
     }
     

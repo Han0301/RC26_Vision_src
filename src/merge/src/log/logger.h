@@ -11,8 +11,9 @@
 #include <sys/types.h>
 #include <cerrno>     // errno 错误码（Ubuntu 下必备）
 #include "./../method_math.h"
-#include "./../recognition/zbuffer_simplify.h"
+#include "./../global/zbuffer.h"
 #include "./../lidar.h"
+#include "./../orb/orb_overall_exhaust.h"
 
 namespace Ten
 {
@@ -60,7 +61,7 @@ namespace Ten
             }
             Ten::XYZRPY pose = Ten::Nav_Odometrytoxyzrpy(odo);
             std::string time = rosTimeToReadable(odo.header.stamp);
-            txtFile << std::endl;
+            //txtFile << std::endl;
             txtFile << time << std::endl;
             txtFile << "Pose:" << std::endl;
             txtFile << "x: " << std::to_string(pose._xyz._x) << std::endl;
@@ -76,13 +77,14 @@ namespace Ten
             txtFile << "roll: " << std::to_string(odo.twist.twist.angular.x) << std::endl;
             txtFile << "pitch: " << std::to_string(odo.twist.twist.angular.y) << std::endl;
             txtFile << "yaw: " << std::to_string(odo.twist.twist.angular.z)  << std::endl;
-            txtFile << std::endl;
+            //txtFile << std::endl;
             return true;
         }
 
         /**
          * @brief 保存图片信息
          * @param box_list: 图片列表
+         * @return bool: 是否记录成功
          */
         bool record_image(const std::vector<box>& box_list)
         {
@@ -110,8 +112,8 @@ namespace Ten
             bool result2 = 0;
             for(size_t i = 0; i < box_list.size(); i++)
             {
-                std::string savePath = directory_ + std::string("/image/") + std::string("image") + std::to_string(directory_num) + std::string("/") + std::string("idx") + std::to_string(box_list[i].idx)
-                                         + std::string("cls") + std::to_string(box_list[i].cls) + std::string("conf") + std::to_string(box_list[i].confidence)+ std::string(".png");
+                std::string savePath = directory_ + std::string("/image/") + std::string("image") + std::to_string(directory_num) + std::string("/") + std::string("idx") + std::to_string(box_list[i].idx) + 
+                std::string("cls") + std::to_string(box_list[i].cls) + std::string("conf") + std::to_string(box_list[i].confidence)+std::string(".png");
                 std::string savePath_debug = directory_ + std::string("/image/") + std::string("image") + std::to_string(directory_num) + std::string("/")+ std::string("hsv") + std::to_string(box_list[i].idx)+std::string(".png");
                 result = cv::imwrite(savePath, box_list[i].roi_image, png_params);
                 cv::Mat img = bgr_color_analysis(box_list[i].roi_image);
@@ -124,8 +126,91 @@ namespace Ten
             }
             //where++;
             directory_num++;
-            return result;
+            return result && result2;
         }
+
+
+
+        /**
+         * @brief 保存图片信息
+         * @param oees: 参数信息r,t,image
+         * @return bool：是否保存成功
+         */
+        bool record_imageRT(const std::vector<Ten::ORB::orb_exhaust_element> oees)
+        {
+            std::lock_guard<std::mutex> lock(image_mtx_);
+            static size_t directory_num = 1;
+
+            // 1. 创建根目录 imageRT
+            std::string root_dir = directory_ + "/imageRT";
+            if (directory_num == 1 && !create_directory(root_dir))
+            {
+                std::cerr << "创建根目录失败: " << root_dir << std::endl;
+                return false;
+            }
+
+            // 2. 创建批次目录 imagertX
+            std::string batch_dir = root_dir + "/imagert" + std::to_string(directory_num);
+            if (!create_directory(batch_dir))
+            {
+                std::cerr << "创建批次目录失败: " << batch_dir << std::endl;
+                return false;
+            }
+
+            // 3. 遍历所有元素，保存图片和RT参数
+            for (size_t i = 0; i < oees.size(); i++)
+            {
+                // 3.1 创建单个元素的目录
+                std::string elem_dir = batch_dir + "/" + std::to_string(i);
+                if (!create_directory(elem_dir))  // 修复：去掉了原代码多余的分号
+                {
+                    std::cerr << "创建元素目录失败: " << elem_dir << std::endl;
+                    return false;
+                }
+
+                // 3.2 保存图片（格式为jpg，可改为png）
+                std::string image_path = elem_dir + "/image.png";
+                if (!cv::imwrite(image_path, oees[i].image_))
+                {
+                    std::cerr << "保存图片失败: " << image_path << std::endl;
+                    return false;
+                }
+
+                // 3.3 保存RT参数到txt文件（先r后t，每行3个值，逗号分隔）
+                std::string rt_path = elem_dir + "/rt.txt";
+                std::ofstream rt_file(rt_path);
+                if (!rt_file.is_open())
+                {
+                    std::cerr << "打开RT文件失败: " << rt_path << std::endl;
+                    return false;
+                }
+
+                // 读取旋转向量rvec（3x1 CV_64F）并写入第一行
+                double r1 = oees[i].rvec_.at<double>(0, 0);
+                double r2 = oees[i].rvec_.at<double>(1, 0);
+                double r3 = oees[i].rvec_.at<double>(2, 0);
+                rt_file << r1 << ", " << r2 << ", " << r3 << std::endl;
+
+                // 读取平移向量tvec（3x1 CV_64F）并写入第二行
+                double t1 = oees[i].tvec_.at<double>(0, 0);
+                double t2 = oees[i].tvec_.at<double>(1, 0);
+                double t3 = oees[i].tvec_.at<double>(2, 0);
+                rt_file << t1 << ", " << t2 << ", " << t3 << std::endl;
+
+                // 关闭文件并检查写入是否成功
+                rt_file.close();
+                if (rt_file.fail())
+                {
+                    std::cerr << "写入RT文件失败: " << rt_path << std::endl;
+                    return false;
+                }
+            }
+
+            // 批次号自增
+            directory_num++;
+            return true;  // 修复：原代码缺少返回值
+        }
+
 
          /**
          * @brief 保存地图信息

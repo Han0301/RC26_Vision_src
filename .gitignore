@@ -1,8 +1,0 @@
-build/
-devel/
-logs/
-install/
-*.pyc
-__pycache__/
-.catkin_tools/
-cmake-build-*/
